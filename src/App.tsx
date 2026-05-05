@@ -83,7 +83,8 @@ export default function App() {
           authorId: k.author_id,
           title: k.title,
           category: k.category,
-          summary: k.summary
+          summary: k.summary,
+          content: k.content
         })));
 
         // Fetch Meeting Info
@@ -128,6 +129,8 @@ export default function App() {
   const [isMemberModalOpen, setMemberModalOpen] = useState(false);
   const [isProjectModalOpen, setProjectModalOpen] = useState(false);
   const [isKnowhowModalOpen, setKnowhowModalOpen] = useState(false);
+  const [isKnowhowViewModalOpen, setKnowhowViewModalOpen] = useState(false);
+  const [selectedKnowhow, setSelectedKnowhow] = useState<Knowhow | null>(null);
   const [isMeetingModalOpen, setMeetingModalOpen] = useState(false);
   const [meetingModalType, setMeetingModalType] = useState<'schedule' | 'question' | 'title_principle'>('schedule');
 
@@ -151,7 +154,8 @@ export default function App() {
     authorId: '',
     title: '',
     category: '개발',
-    summary: ''
+    summary: '',
+    content: ''
   });
   const [meetingForm, setMeetingForm] = useState({
     time: '',
@@ -411,6 +415,21 @@ export default function App() {
     });
   };
 
+  const handleEditKnowhow = (kh: Knowhow) => {
+    const author = members.find(m => m.id === kh.authorId);
+    setNewKnowhow({
+      ...kh,
+      authorId: author ? author.name : kh.authorId,
+      content: kh.content || ''
+    });
+    setKnowhowModalOpen(true);
+  };
+
+  const handleViewKnowhow = (kh: Knowhow) => {
+    setSelectedKnowhow(kh);
+    setKnowhowViewModalOpen(true);
+  };
+
   const handleAddKnowhow = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newKnowhow.title?.trim() || !newKnowhow.authorId?.trim()) return;
@@ -445,29 +464,64 @@ export default function App() {
       }
     }
 
-    const kh: Knowhow = {
-      ...(newKnowhow as Knowhow),
-      id: `k${Date.now() + 3}`,
-      authorId: finalAuthorId,
-    };
+    if (newKnowhow.id) {
+      // Update existing knowhow
+      const kh: Knowhow = {
+        ...(newKnowhow as Knowhow),
+        authorId: finalAuthorId,
+      };
 
-    const { error: kError } = await supabase.from('knowhows').insert({
-      id: kh.id,
-      author_id: kh.authorId,
-      title: kh.title,
-      category: kh.category,
-      summary: kh.summary
-    });
+      const { error: kError } = await supabase.from('knowhows').update({
+        author_id: kh.authorId,
+        title: kh.title,
+        category: kh.category,
+        summary: kh.summary,
+        content: kh.content
+      }).eq('id', kh.id);
 
-    if (!kError) {
-      setKnowhows([kh, ...knowhows]);
-      setKnowhowModalOpen(false);
-      setNewKnowhow({
-        authorId: '',
-        title: '',
-        category: '개발',
-        summary: ''
+      if (!kError) {
+        setKnowhows(prev => prev.map(k => k.id === kh.id ? kh : k));
+        setKnowhowModalOpen(false);
+        setNewKnowhow({
+          authorId: '',
+          title: '',
+          category: '개발',
+          summary: '',
+          content: ''
+        });
+      } else {
+        alert('노하우 수정 중 오류가 발생했습니다.');
+      }
+    } else {
+      // Create new knowhow
+      const kh: Knowhow = {
+        ...(newKnowhow as Knowhow),
+        id: `k${Date.now() + 3}`,
+        authorId: finalAuthorId,
+      };
+
+      const { error: kError } = await supabase.from('knowhows').insert({
+        id: kh.id,
+        author_id: kh.authorId,
+        title: kh.title,
+        category: kh.category,
+        summary: kh.summary,
+        content: kh.content
       });
+
+      if (!kError) {
+        setKnowhows([kh, ...knowhows]);
+        setKnowhowModalOpen(false);
+        setNewKnowhow({
+          authorId: '',
+          title: '',
+          category: '개발',
+          summary: '',
+          content: ''
+        });
+      } else {
+        alert('노하우 등록 중 오류가 발생했습니다.');
+      }
     }
   };
 
@@ -522,7 +576,13 @@ export default function App() {
             )}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
               <div className="lg:col-span-2">
-                <KnowhowSection knowhows={knowhows} onDelete={handleDeleteKnowhow} members={members} />
+                <KnowhowSection 
+                  knowhows={knowhows} 
+                  onDelete={handleDeleteKnowhow} 
+                  onEdit={handleEditKnowhow}
+                  onView={handleViewKnowhow}
+                  members={members} 
+                />
               </div>
               <div>
                 <MeetingBoard 
@@ -575,7 +635,13 @@ export default function App() {
               </button>
             </div>
             {knowhows.length > 0 ? (
-              <KnowhowSection knowhows={knowhows} onDelete={handleDeleteKnowhow} members={members} />
+              <KnowhowSection 
+                knowhows={knowhows} 
+                onDelete={handleDeleteKnowhow} 
+                onEdit={handleEditKnowhow}
+                onView={handleViewKnowhow}
+                members={members} 
+              />
             ) : (
               <div className="bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-800 rounded-3xl p-20 text-center transition-colors">
                 <Tag className="w-12 h-12 text-slate-200 dark:text-slate-700 mx-auto mb-4" />
@@ -735,6 +801,122 @@ export default function App() {
         {renderContent()}
 
         {/* Dynamic Modals */}
+        <Modal
+          isOpen={isKnowhowViewModalOpen}
+          onClose={() => setKnowhowViewModalOpen(false)}
+          title={selectedKnowhow?.title || '지식 공유'}
+        >
+          {selectedKnowhow && (
+            <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-2">
+              <div className="flex items-center gap-3">
+                <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm border border-blue-100">
+                  {selectedKnowhow.category}
+                </span>
+                <span className="text-[10px] font-black text-slate-300 uppercase">
+                  ID: {selectedKnowhow.id}
+                </span>
+              </div>
+              
+              <div className="bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-6">
+                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">요약</h4>
+                <p className="text-slate-700 dark:text-slate-300 font-bold leading-relaxed">
+                  {selectedKnowhow.summary}
+                </p>
+              </div>
+
+              <div>
+                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">상세 내용</h4>
+                <div className={`p-8 rounded-[2rem] border ${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-300' : 'bg-white border-slate-200 text-slate-700 shadow-sm'} font-medium leading-loose whitespace-pre-wrap`}>
+                  {selectedKnowhow.content || '작성된 상세 내용이 없습니다.'}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 pt-6 border-t border-slate-100 dark:border-slate-800">
+                <img 
+                  src={members.find(m => m.id === selectedKnowhow.authorId)?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${selectedKnowhow.authorId}`} 
+                  alt="author" 
+                  className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800"
+                  referrerPolicy="no-referrer"
+                />
+                <span className="text-sm font-black text-slate-800 dark:text-slate-200">
+                  {members.find(m => m.id === selectedKnowhow.authorId)?.name || selectedKnowhow.authorId}
+                </span>
+              </div>
+            </div>
+          )}
+        </Modal>
+
+        <Modal
+          isOpen={isKnowhowModalOpen}
+          onClose={() => setKnowhowModalOpen(false)}
+          title={newKnowhow.id ? '노하우 수정' : '노하우 작성'}
+        >
+          <form onSubmit={handleAddKnowhow} className="space-y-6">
+            <div className="grid grid-cols-2 gap-6">
+              <div>
+                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">작성자 명</label>
+                <input 
+                  type="text" 
+                  list="members-list"
+                  value={newKnowhow.authorId}
+                  onChange={(e) => setNewKnowhow({...newKnowhow, authorId: e.target.value})}
+                  className={`w-full px-6 py-4 rounded-2xl border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white focus:ring-blue-900/40' : 'bg-white border-slate-200 focus:ring-blue-50'} outline-none focus:ring-4 font-bold transition-all`}
+                  required
+                />
+                <datalist id="members-list">
+                  {members.map(m => <option key={m.id} value={m.name} />)}
+                </datalist>
+              </div>
+              <div>
+                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">카테고리</label>
+                <select 
+                  value={newKnowhow.category}
+                  onChange={(e) => setNewKnowhow({...newKnowhow, category: e.target.value})}
+                  className={`w-full px-6 py-4 rounded-2xl border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white focus:ring-blue-900/40' : 'bg-white border-slate-200 focus:ring-blue-50'} outline-none focus:ring-4 font-bold transition-all`}
+                >
+                  {['개발', '디자인', '기획', '마케팅', '비즈니스', '기타'].map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">제목</label>
+              <input 
+                type="text" 
+                value={newKnowhow.title}
+                onChange={(e) => setNewKnowhow({...newKnowhow, title: e.target.value})}
+                className={`w-full px-6 py-4 rounded-2xl border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white focus:ring-blue-900/40' : 'bg-white border-slate-200 focus:ring-blue-50'} outline-none focus:ring-4 font-black transition-all`}
+                placeholder="노하우의 핵심 주제를 입력하세요"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">요약</label>
+              <input 
+                type="text" 
+                value={newKnowhow.summary}
+                onChange={(e) => setNewKnowhow({...newKnowhow, summary: e.target.value})}
+                className={`w-full px-6 py-4 rounded-2xl border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white focus:ring-blue-900/40' : 'bg-white border-slate-200 focus:ring-blue-50'} outline-none focus:ring-4 font-bold transition-all`}
+                placeholder="간략하게 한 줄로 설명해 주세요"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">상세 내용 (선택)</label>
+              <textarea 
+                value={newKnowhow.content}
+                onChange={(e) => setNewKnowhow({...newKnowhow, content: e.target.value})}
+                className={`w-full px-6 py-4 rounded-2xl border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white focus:ring-blue-900/40' : 'bg-white border-slate-200 focus:ring-blue-50'} outline-none focus:ring-4 h-64 font-medium leading-relaxed transition-all resize-none`}
+                placeholder="자세한 노하우 내용을 공유해 주세요."
+              />
+            </div>
+            <button className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black shadow-xl shadow-blue-500/20 hover:bg-blue-700 transition-all text-lg">
+              {newKnowhow.id ? '수정 완료' : '노하우 공유하기'}
+            </button>
+          </form>
+        </Modal>
+
         <Modal 
           isOpen={isMeetingModalOpen}
           onClose={() => setMeetingModalOpen(false)}

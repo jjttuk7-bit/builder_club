@@ -309,9 +309,11 @@ interface KnowhowSectionProps {
   knowhows: Knowhow[];
   members: Member[];
   onDelete: (id: string) => void;
+  onEdit?: (kh: Knowhow) => void;
+  onView?: (kh: Knowhow) => void;
 }
 
-export const KnowhowSection = ({ knowhows, onDelete, members }: KnowhowSectionProps) => {
+export const KnowhowSection = ({ knowhows, onDelete, members, onEdit, onView }: KnowhowSectionProps) => {
   return (
     <section className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[3rem] p-10 shadow-sm relative overflow-hidden transition-colors">
       <div className="absolute top-0 right-0 p-10 opacity-[0.03] dark:opacity-[0.05] pointer-events-none transition-opacity text-slate-400 dark:text-blue-400">
@@ -332,7 +334,11 @@ export const KnowhowSection = ({ knowhows, onDelete, members }: KnowhowSectionPr
         {knowhows.map(kh => {
           const author = members.find(m => m.id === kh.authorId);
           return (
-            <div key={kh.id} className="group bg-slate-50 dark:bg-slate-850/50 border border-slate-100 dark:border-slate-800/10 p-6 rounded-[2rem] hover:bg-white dark:hover:bg-slate-800 hover:border-blue-200 dark:hover:border-blue-900/50 transition-all hover:shadow-xl hover:shadow-blue-500/5">
+            <div 
+              key={kh.id} 
+              onClick={() => onView?.(kh)}
+              className="group bg-slate-50 dark:bg-slate-850/50 border border-slate-100 dark:border-slate-800/10 p-6 rounded-[2rem] hover:bg-white dark:hover:bg-slate-800 hover:border-blue-200 dark:hover:border-blue-900/50 transition-all hover:shadow-xl hover:shadow-blue-500/5 cursor-pointer"
+            >
               <div className="flex items-start gap-5">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
@@ -365,8 +371,14 @@ export const KnowhowSection = ({ knowhows, onDelete, members }: KnowhowSectionPr
                   </div>
                 </div>
                 <div className="flex flex-col gap-2">
-                  <button className="p-2 text-slate-200 dark:text-slate-700 hover:text-blue-600 transition-colors">
-                    <ArrowUpRight className="w-5 h-5" />
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEdit?.(kh);
+                    }}
+                    className="p-2 text-slate-300 dark:text-slate-600 hover:text-blue-600 transition-colors"
+                  >
+                    <Pencil className="w-5 h-5" />
                   </button>
                   <button 
                     type="button"
