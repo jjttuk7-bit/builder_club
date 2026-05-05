@@ -624,7 +624,7 @@ export default function App() {
                       e.stopPropagation();
                       handleDeleteMember(member.id);
                     }}
-                    className="p-2 text-slate-400 dark:text-slate-500 hover:text-rose-500 transition-all hover:scale-110 active:scale-95 cursor-pointer z-20"
+                    className="p-2 text-slate-500 dark:text-slate-400 hover:text-rose-500 transition-all hover:scale-110 active:scale-95 cursor-pointer z-20"
                     title="멤버 삭제"
                   >
                     <Trash2 className="w-5 h-5" />

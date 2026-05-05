@@ -116,7 +116,7 @@ function ProjectCard({ project, onDelete, onEdit, member }: ProjectCardProps) {
               e.stopPropagation();
               onDelete(project.id);
             }}
-            className="p-2 text-slate-400 dark:text-slate-500 hover:text-rose-500 transition-all hover:scale-110 active:scale-90 cursor-pointer z-20"
+            className="p-2 text-slate-500 dark:text-slate-400 hover:text-rose-500 transition-all hover:scale-110 active:scale-90 cursor-pointer z-20"
             title="프로젝트 삭제"
           >
             <Trash2 className="w-5 h-5" />
@@ -374,7 +374,7 @@ export const KnowhowSection = ({ knowhows, onDelete, members }: KnowhowSectionPr
                       e.stopPropagation();
                       onDelete(kh.id);
                     }}
-                    className="p-2 text-slate-400 dark:text-slate-500 hover:text-rose-500 transition-all hover:scale-110 active:scale-90 cursor-pointer z-20"
+                    className="p-2 text-slate-500 dark:text-slate-400 hover:text-rose-500 transition-all hover:scale-110 active:scale-90 cursor-pointer z-20"
                     title="노하우 삭제"
                   >
                     <Trash2 className="w-5 h-5" />
@@ -468,7 +468,7 @@ export const MeetingBoard = ({
                   e.stopPropagation();
                   onDeleteSchedule(i);
                 }}
-                className="p-2 text-slate-400 dark:text-slate-500 hover:text-rose-500 transition-all hover:scale-110 active:scale-90 cursor-pointer z-20"
+                className="p-2 text-slate-500 dark:text-slate-400 hover:text-rose-500 transition-all hover:scale-110 active:scale-90 cursor-pointer z-20"
                 title="일정 삭제"
               >
                 <Trash2 className="w-4 h-4" />
@@ -502,7 +502,7 @@ export const MeetingBoard = ({
                   e.stopPropagation();
                   onDeleteQuestion(i);
                 }}
-                className="p-2 text-indigo-400 dark:text-indigo-600 hover:text-rose-500 transition-all hover:scale-110 active:scale-90 cursor-pointer z-20"
+                className="p-2 text-indigo-500 dark:text-indigo-400 hover:text-rose-500 transition-all hover:scale-110 active:scale-90 cursor-pointer z-20"
                 title="질문 삭제"
               >
                 <Trash2 className="w-4 h-4" />
