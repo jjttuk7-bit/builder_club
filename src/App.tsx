@@ -848,18 +848,28 @@ export default function App() {
 
         <Modal
           isOpen={isKnowhowModalOpen}
-          onClose={() => setKnowhowModalOpen(false)}
-          title={newKnowhow.id ? '노하우 수정' : '노하우 작성'}
+          onClose={() => {
+            setKnowhowModalOpen(false);
+            setNewKnowhow({
+              authorId: '',
+              title: '',
+              category: '개발',
+              summary: '',
+              content: ''
+            });
+          }}
+          title={newKnowhow.id ? '노하우 수정' : '노하우 아카이빙'}
         >
           <form onSubmit={handleAddKnowhow} className="space-y-6">
             <div className="grid grid-cols-2 gap-6">
               <div>
-                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">작성자 명</label>
+                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">작성자</label>
                 <input 
                   type="text" 
                   list="members-list"
                   value={newKnowhow.authorId}
                   onChange={(e) => setNewKnowhow({...newKnowhow, authorId: e.target.value})}
+                  placeholder="작성자 성함을 입력하세요"
                   className={`w-full px-6 py-4 rounded-2xl border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white focus:ring-blue-900/40' : 'bg-white border-slate-200 focus:ring-blue-50'} outline-none focus:ring-4 font-bold transition-all`}
                   required
                 />
@@ -868,20 +878,20 @@ export default function App() {
                 </datalist>
               </div>
               <div>
-                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">카테고리</label>
+                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">분야 선택</label>
                 <select 
                   value={newKnowhow.category}
                   onChange={(e) => setNewKnowhow({...newKnowhow, category: e.target.value})}
                   className={`w-full px-6 py-4 rounded-2xl border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white focus:ring-blue-900/40' : 'bg-white border-slate-200 focus:ring-blue-50'} outline-none focus:ring-4 font-bold transition-all`}
                 >
-                  {['개발', '디자인', '기획', '마케팅', '비즈니스', '기타'].map(cat => (
+                  {['개발', '코딩', '프롬프트', '디자인', '기획', '마케팅', '비즈니스', '투자/지표', '기타'].map(cat => (
                     <option key={cat} value={cat}>{cat}</option>
                   ))}
                 </select>
               </div>
             </div>
             <div>
-              <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">제목</label>
+              <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">지식의 열쇠 (제목)</label>
               <input 
                 type="text" 
                 value={newKnowhow.title}
@@ -892,7 +902,7 @@ export default function App() {
               />
             </div>
             <div>
-              <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">요약</label>
+              <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">핵심 요약</label>
               <input 
                 type="text" 
                 value={newKnowhow.summary}
@@ -908,11 +918,11 @@ export default function App() {
                 value={newKnowhow.content}
                 onChange={(e) => setNewKnowhow({...newKnowhow, content: e.target.value})}
                 className={`w-full px-6 py-4 rounded-2xl border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white focus:ring-blue-900/40' : 'bg-white border-slate-200 focus:ring-blue-50'} outline-none focus:ring-4 h-64 font-medium leading-relaxed transition-all resize-none`}
-                placeholder="자세한 노하우 내용을 공유해 주세요."
+                placeholder="동료들과 공유하고 싶은 상세한 노하우 내용을 입력해 주세요."
               />
             </div>
             <button className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black shadow-xl shadow-blue-500/20 hover:bg-blue-700 transition-all text-lg">
-              {newKnowhow.id ? '수정 완료' : '노하우 공유하기'}
+              {newKnowhow.id ? '수정 완료' : '지식 저장하기'}
             </button>
           </form>
         </Modal>
@@ -1100,66 +1110,6 @@ export default function App() {
             </div>
             <button className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black shadow-xl shadow-blue-500/20 hover:bg-blue-700 transition-all text-lg">
               {newProject.id ? "수정 완료" : "프로젝트 런칭하기"}
-            </button>
-          </form>
-        </Modal>
-
-        <Modal 
-          isOpen={isKnowhowModalOpen} 
-          onClose={() => setKnowhowModalOpen(false)} 
-          title="노하우 아카이빙"
-        >
-          <form onSubmit={handleAddKnowhow} className="space-y-6">
-            <div>
-              <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">작성자</label>
-              <input 
-                type="text" 
-                value={newKnowhow.authorId}
-                onChange={(e) => setNewKnowhow({...newKnowhow, authorId: e.target.value})}
-                placeholder="본인의 이름을 입력하세요"
-                className={`w-full px-6 py-4 rounded-2xl border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white focus:ring-blue-900/40' : 'bg-slate-50/50 border-slate-200 focus:ring-blue-50'} outline-none focus:ring-4 font-bold transition-all`}
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">지식의 열쇠 (제목)</label>
-              <input 
-                type="text" 
-                value={newKnowhow.title}
-                onChange={(e) => setNewKnowhow({...newKnowhow, title: e.target.value})}
-                className={`w-full px-6 py-4 rounded-2xl border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white focus:ring-blue-900/40' : 'bg-white border-slate-200 focus:ring-blue-50'} outline-none focus:ring-4 font-black text-lg transition-all`}
-                placeholder="핵심 노하우를 한 문장으로 표현하세요"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">분야 선택</label>
-              <select 
-                value={newKnowhow.category}
-                onChange={(e) => setNewKnowhow({...newKnowhow, category: e.target.value})}
-                className={`w-full px-6 py-4 rounded-2xl border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white focus:ring-blue-900/40' : 'bg-white border-slate-200 text-slate-600 focus:ring-blue-50'} outline-none focus:ring-4 font-bold transition-all`}
-              >
-                <option>개발</option>
-                <option>코딩</option>
-                <option>프롬프트</option>
-                <option>디자인</option>
-                <option>기획</option>
-                <option>마케팅</option>
-                <option>투자/지표</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">핵심 요약</label>
-              <textarea 
-                value={newKnowhow.summary}
-                onChange={(e) => setNewKnowhow({...newKnowhow, summary: e.target.value})}
-                className={`w-full px-6 py-4 rounded-2xl border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white focus:ring-blue-900/40' : 'bg-white border-slate-200 focus:ring-blue-50'} outline-none focus:ring-4 h-40 font-bold leading-relaxed transition-all`}
-                placeholder="동료들이 바로 적용할 수 있도록 요약해 주세요"
-                required
-              />
-            </div>
-            <button className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black shadow-xl shadow-blue-500/10 hover:bg-blue-700 transition-all">
-              지식 저장하기
             </button>
           </form>
         </Modal>
