@@ -17,17 +17,18 @@ import {
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { 
-  Header, 
+  Header,
   ProjectBoard, 
   KnowhowSection, 
   MeetingBoard 
 } from './components/dashboard';
 import { Modal } from './components/ui/modal';
+import { supabase } from './lib/supabase';
 import { projects as initialProjects } from './data/projects';
 import { knowhows as initialKnowhows } from './data/knowhows';
 import { members as initialMembers } from './data/members';
 import { meeting as initialMeeting } from './data/meeting';
-import { Project, Knowhow, Member } from './types';
+import { Project, Knowhow, Member, Meeting } from './types';
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -39,7 +40,69 @@ export default function App() {
   const [projects, setProjects] = useState<Project[]>(initialProjects);
   const [knowhows, setKnowhows] = useState<Knowhow[]>(initialKnowhows);
   const [members, setMembers] = useState<Member[]>(initialMembers);
-  const [meeting, setMeeting] = useState(initialMeeting);
+  const [meeting, setMeeting] = useState<Meeting>(initialMeeting);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Supabase Data Fetching
+  React.useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        // Fetch Members
+        const { data: mData } = await supabase.from('members').select('*');
+        if (mData) setMembers(mData.map(m => ({
+          id: m.id,
+          name: m.name,
+          role: m.role,
+          avatarUrl: m.avatar_url
+        })));
+
+        // Fetch Projects
+        const { data: pData } = await supabase.from('projects').select('*');
+        if (pData) setProjects(pData.map(p => ({
+          id: p.id,
+          ownerId: p.owner_id,
+          title: p.title,
+          description: p.description,
+          problemDefinition: p.problem_definition,
+          coreFeatures: p.core_features,
+          status: p.status,
+          progress: p.progress,
+          thisWeekGoal: p.this_week_goal,
+          thisWeekResult: p.this_week_result,
+          blocker: p.blocker,
+          helpRequest: p.help_request,
+          actionType: p.action_type,
+          actionLabel: p.action_label
+        })));
+
+        // Fetch Knowhows
+        const { data: kData } = await supabase.from('knowhows').select('*');
+        if (kData) setKnowhows(kData.map(k => ({
+          id: k.id,
+          authorId: k.author_id,
+          title: k.title,
+          category: k.category,
+          summary: k.summary
+        })));
+
+        // Fetch Meeting Info
+        const { data: mtData } = await supabase.from('meeting_info').select('*').single();
+        if (mtData) setMeeting({
+          title: mtData.title,
+          principle: mtData.principle,
+          schedule: mtData.schedule,
+          commonQuestions: mtData.common_questions
+        });
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   const CORRECT_PASSWORD = 'builder123'; // 기본 비밀번호 설정
 
@@ -110,57 +173,94 @@ export default function App() {
     setMeetingModalOpen(true);
   };
 
-  const handleMeetingFormSubmit = (e: React.FormEvent) => {
+  const handleMeetingFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    let updatedMeeting = { ...meeting };
+
     if (meetingModalType === 'schedule') {
       if (!meetingForm.time || !meetingForm.activity) return;
-      setMeeting(prev => ({
-        ...prev,
-        schedule: [...prev.schedule, { time: meetingForm.time, activity: meetingForm.activity }]
-      }));
+      updatedMeeting = {
+        ...meeting,
+        schedule: [...meeting.schedule, { time: meetingForm.time, activity: meetingForm.activity }]
+      };
     } else if (meetingModalType === 'question') {
       if (!meetingForm.question) return;
-      setMeeting(prev => ({
-        ...prev,
-        commonQuestions: [...prev.commonQuestions, meetingForm.question]
-      }));
+      updatedMeeting = {
+        ...meeting,
+        commonQuestions: [...meeting.commonQuestions, meetingForm.question]
+      };
     } else if (meetingModalType === 'title_principle') {
-      setMeeting(prev => ({
-        ...prev,
+      updatedMeeting = {
+        ...meeting,
         title: meetingForm.title,
         principle: meetingForm.principle
-      }));
+      };
     }
-    setMeetingModalOpen(false);
+
+    // Sync with Supabase (assuming single row with id=1)
+    const { error } = await supabase.from('meeting_info').upsert({
+      id: 1,
+      title: updatedMeeting.title,
+      principle: updatedMeeting.principle,
+      schedule: updatedMeeting.schedule,
+      common_questions: updatedMeeting.commonQuestions,
+      updated_at: new Date().toISOString()
+    });
+
+    if (!error) {
+      setMeeting(updatedMeeting);
+      setMeetingModalOpen(false);
+    } else {
+      alert('데이터 저장 중 오류가 발생했습니다.');
+    }
   };
 
-  const handleDeleteSchedule = (index: number) => {
-    setMeeting(prev => ({
-      ...prev,
-      schedule: prev.schedule.filter((_, i) => i !== index)
-    }));
+  const handleDeleteSchedule = async (index: number) => {
+    const updatedSchedule = meeting.schedule.filter((_, i) => i !== index);
+    const { error } = await supabase.from('meeting_info').update({
+      schedule: updatedSchedule,
+      updated_at: new Date().toISOString()
+    }).eq('id', 1);
+
+    if (!error) {
+      setMeeting(prev => ({ ...prev, schedule: updatedSchedule }));
+    }
   };
 
-  const handleDeleteQuestion = (index: number) => {
-    setMeeting(prev => ({
-      ...prev,
-      commonQuestions: prev.commonQuestions.filter((_, i) => i !== index)
-    }));
+  const handleDeleteQuestion = async (index: number) => {
+    const updatedQuestions = meeting.commonQuestions.filter((_, i) => i !== index);
+    const { error } = await supabase.from('meeting_info').update({
+      common_questions: updatedQuestions,
+      updated_at: new Date().toISOString()
+    }).eq('id', 1);
+
+    if (!error) {
+      setMeeting(prev => ({ ...prev, commonQuestions: updatedQuestions }));
+    }
   };
 
-  const handleDeleteProject = (id: string) => {
-    setProjects(prev => prev.filter(p => p.id !== id));
+  const handleDeleteProject = async (id: string) => {
+    const { error } = await supabase.from('projects').delete().eq('id', id);
+    if (!error) {
+      setProjects(prev => prev.filter(p => p.id !== id));
+    }
   };
 
-  const handleDeleteKnowhow = (id: string) => {
-    setKnowhows(prev => prev.filter(k => k.id !== id));
+  const handleDeleteKnowhow = async (id: string) => {
+    const { error } = await supabase.from('knowhows').delete().eq('id', id);
+    if (!error) {
+      setKnowhows(prev => prev.filter(k => k.id !== id));
+    }
   };
 
-  const handleDeleteMember = (id: string) => {
-    setMembers(prev => prev.filter(m => m.id !== id));
+  const handleDeleteMember = async (id: string) => {
+    const { error } = await supabase.from('members').delete().eq('id', id);
+    if (!error) {
+      setMembers(prev => prev.filter(m => m.id !== id));
+    }
   };
 
-  const handleAddMember = (e: React.FormEvent) => {
+  const handleAddMember = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMemberName.trim()) return;
     const newMember: Member = {
@@ -169,25 +269,36 @@ export default function App() {
       role: 'Builder',
       avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${newMemberName}`
     };
-    setMembers([...members, newMember]);
-    setNewMemberName('');
-    setMemberModalOpen(false);
+
+    const { error } = await supabase.from('members').insert({
+      id: newMember.id,
+      name: newMember.name,
+      role: newMember.role,
+      avatar_url: newMember.avatarUrl
+    });
+
+    if (!error) {
+      setMembers([...members, newMember]);
+      setNewMemberName('');
+      setMemberModalOpen(false);
+    } else {
+      alert('멤버 추가 중 오류가 발생했습니다.');
+    }
   };
 
   const handleEditProject = (project: Project) => {
     const owner = members.find(m => m.id === project.ownerId);
     setNewProject({
       ...project,
-      ownerId: owner ? owner.name : project.ownerId // Use member name for the input field
+      ownerId: owner ? owner.name : project.ownerId
     });
     setProjectModalOpen(true);
   };
 
-  const handleAddProject = (e: React.FormEvent) => {
+  const handleAddProject = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newProject.title?.trim() || !newProject.ownerId?.trim()) return;
     
-    // Find or create member logic
     let finalOwnerId = '';
     const existingMember = members.find(m => m.name === newProject.ownerId);
     
@@ -201,13 +312,45 @@ export default function App() {
         role: 'Builder',
         avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${newProject.ownerId}`
       };
-      setMembers(prev => [...prev, newMember]);
-      finalOwnerId = newId;
+      
+      const { error: mError } = await supabase.from('members').insert({
+        id: newMember.id,
+        name: newMember.name,
+        role: newMember.role,
+        avatar_url: newMember.avatarUrl
+      });
+      
+      if (!mError) {
+        setMembers(prev => [...prev, newMember]);
+        finalOwnerId = newId;
+      } else {
+        alert('멤버 생성 중 오류가 발생했습니다.');
+        return;
+      }
     }
 
     if (newProject.id) {
       // Update existing project
-      setProjects(prev => prev.map(p => p.id === newProject.id ? { ...newProject as Project, ownerId: finalOwnerId } : p));
+      const updatedProject = { ...newProject as Project, ownerId: finalOwnerId };
+      const { error: pError } = await supabase.from('projects').update({
+        owner_id: updatedProject.ownerId,
+        title: updatedProject.title,
+        description: updatedProject.description,
+        problem_definition: updatedProject.problemDefinition,
+        core_features: updatedProject.coreFeatures,
+        status: updatedProject.status,
+        progress: updatedProject.progress,
+        this_week_goal: updatedProject.thisWeekGoal,
+        this_week_result: updatedProject.thisWeekResult,
+        blocker: updatedProject.blocker,
+        help_request: updatedProject.helpRequest,
+        action_type: updatedProject.actionType,
+        action_label: updatedProject.actionLabel
+      }).eq('id', updatedProject.id);
+
+      if (!pError) {
+        setProjects(prev => prev.map(p => p.id === updatedProject.id ? updatedProject : p));
+      }
     } else {
       // Create new project
       const project: Project = {
@@ -215,7 +358,27 @@ export default function App() {
         id: `p${Date.now() + 1}`,
         ownerId: finalOwnerId,
       };
-      setProjects([project, ...projects]);
+
+      const { error: pError } = await supabase.from('projects').insert({
+        id: project.id,
+        owner_id: project.ownerId,
+        title: project.title,
+        description: project.description,
+        problem_definition: project.problemDefinition,
+        core_features: project.coreFeatures,
+        status: project.status,
+        progress: project.progress,
+        this_week_goal: project.thisWeekGoal,
+        this_week_result: project.thisWeekResult,
+        blocker: project.blocker,
+        help_request: project.helpRequest,
+        action_type: project.actionType,
+        action_label: project.actionLabel
+      });
+
+      if (!pError) {
+        setProjects([project, ...projects]);
+      }
     }
 
     setProjectModalOpen(false);
@@ -236,11 +399,10 @@ export default function App() {
     });
   };
 
-  const handleAddKnowhow = (e: React.FormEvent) => {
+  const handleAddKnowhow = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newKnowhow.title?.trim() || !newKnowhow.authorId?.trim()) return;
 
-    // Find or create member logic
     let finalAuthorId = '';
     const existingMember = members.find(m => m.name === newKnowhow.authorId);
     
@@ -254,8 +416,21 @@ export default function App() {
         role: 'Builder',
         avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${newKnowhow.authorId}`
       };
-      setMembers(prev => [...prev, newMember]);
-      finalAuthorId = newId;
+      
+      const { error: mError } = await supabase.from('members').insert({
+        id: newMember.id,
+        name: newMember.name,
+        role: newMember.role,
+        avatar_url: newMember.avatarUrl
+      });
+      
+      if (!mError) {
+        setMembers(prev => [...prev, newMember]);
+        finalAuthorId = newId;
+      } else {
+        alert('멤버 생성 중 오류가 발생했습니다.');
+        return;
+      }
     }
 
     const kh: Knowhow = {
@@ -264,14 +439,24 @@ export default function App() {
       authorId: finalAuthorId,
     };
 
-    setKnowhows([kh, ...knowhows]);
-    setKnowhowModalOpen(false);
-    setNewKnowhow({
-      authorId: '',
-      title: '',
-      category: '개발',
-      summary: ''
+    const { error: kError } = await supabase.from('knowhows').insert({
+      id: kh.id,
+      author_id: kh.authorId,
+      title: kh.title,
+      category: kh.category,
+      summary: kh.summary
     });
+
+    if (!kError) {
+      setKnowhows([kh, ...knowhows]);
+      setKnowhowModalOpen(false);
+      setNewKnowhow({
+        authorId: '',
+        title: '',
+        category: '개발',
+        summary: ''
+      });
+    }
   };
 
   const handleOpenAddProject = (memberId?: string) => {
