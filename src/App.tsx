@@ -240,23 +240,33 @@ export default function App() {
   };
 
   const handleDeleteProject = async (id: string) => {
+    if (!window.confirm('이 프로젝트를 삭제하시겠습니까?')) return;
     const { error } = await supabase.from('projects').delete().eq('id', id);
     if (!error) {
       setProjects(prev => prev.filter(p => p.id !== id));
+    } else {
+      console.error('Delete error:', error);
+      alert('프로젝트 삭제 중 오류가 발생했습니다: ' + error.message);
     }
   };
 
   const handleDeleteKnowhow = async (id: string) => {
+    if (!window.confirm('이 노하우를 삭제하시겠습니까?')) return;
     const { error } = await supabase.from('knowhows').delete().eq('id', id);
     if (!error) {
       setKnowhows(prev => prev.filter(k => k.id !== id));
+    } else {
+      alert('노하우 삭제 중 오류가 발생했습니다.');
     }
   };
 
   const handleDeleteMember = async (id: string) => {
+    if (!window.confirm('이 멤버를 삭제하시겠습니까? 멤버 정보와 연결된 아바타 등이 목록에서 제거됩니다.')) return;
     const { error } = await supabase.from('members').delete().eq('id', id);
     if (!error) {
       setMembers(prev => prev.filter(m => m.id !== id));
+    } else {
+      alert('멤버 삭제 중 오류가 발생했습니다. (멤버가 생성한 프로젝트가 있으면 삭제되지 않을 수 있습니다)');
     }
   };
 
@@ -614,7 +624,7 @@ export default function App() {
                       e.stopPropagation();
                       handleDeleteMember(member.id);
                     }}
-                    className="p-2 text-slate-300 dark:text-slate-600 hover:text-rose-500 transition-all hover:scale-110 active:scale-95 cursor-pointer z-20"
+                    className="p-2 text-slate-400 dark:text-slate-500 hover:text-rose-500 transition-all hover:scale-110 active:scale-95 cursor-pointer z-20"
                     title="멤버 삭제"
                   >
                     <Trash2 className="w-5 h-5" />
