@@ -246,7 +246,7 @@ export default function App() {
       setProjects(prev => prev.filter(p => p.id !== id));
     } else {
       console.error('Delete error:', error);
-      alert('프로젝트 삭제 중 오류가 발생했습니다: ' + error.message);
+      alert(`프로젝트 삭제 중 오류가 발생했습니다: ${error.message}\n(테이블 'projects'가 생성되어 있는지 확인해 주세요)`);
     }
   };
 
@@ -256,7 +256,8 @@ export default function App() {
     if (!error) {
       setKnowhows(prev => prev.filter(k => k.id !== id));
     } else {
-      alert('노하우 삭제 중 오류가 발생했습니다.');
+      console.error('Delete error:', error);
+      alert(`노하우 삭제 중 오류가 발생했습니다: ${error.message}`);
     }
   };
 
@@ -266,7 +267,8 @@ export default function App() {
     if (!error) {
       setMembers(prev => prev.filter(m => m.id !== id));
     } else {
-      alert('멤버 삭제 중 오류가 발생했습니다. (멤버가 생성한 프로젝트가 있으면 삭제되지 않을 수 있습니다)');
+      console.error('Delete error:', error);
+      alert(`멤버 삭제 중 오류가 발생했습니다: ${error.message}\n(멤버가 생성한 프로젝트가 있으면 삭제되지 않을 수 있습니다)`);
     }
   };
 
