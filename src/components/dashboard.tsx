@@ -20,10 +20,13 @@ import {
   Moon,
   Sun,
   Activity,
-  MessageSquare
+  MessageSquare,
+  BookMarked,
+  Hash
 } from 'lucide-react';
 import React from 'react';
-import { Project, Knowhow, Member, Meeting } from '../types';
+import { Project, Knowhow, Member, Meeting, BuilderMemo } from '../types';
+import { motion } from 'motion/react';
 
 // --- Header ---
 interface HeaderProps {
@@ -631,6 +634,147 @@ interface BoardProps {
   onCreateComment: (postId: string, content: string) => void;
   isDarkMode: boolean;
 }
+
+// --- Builder Log ---
+interface BuilderLogProps {
+  memos: BuilderMemo[];
+  members: Member[];
+  onDelete: (id: string) => void;
+  onCreate: (content: string, tags: string[], authorId: string) => void;
+  isDarkMode: boolean;
+}
+
+export const BuilderLog = ({
+  memos,
+  members,
+  onDelete,
+  onCreate,
+  isDarkMode
+}: BuilderLogProps) => {
+  const [content, setContent] = React.useState('');
+  const [tagInput, setTagInput] = React.useState('');
+  const [selectedAuthorId, setSelectedAuthorId] = React.useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!content.trim() || !selectedAuthorId) {
+      if (!selectedAuthorId) alert('작성자를 선택해주세요!');
+      return;
+    }
+    const tags = tagInput.split(',').map(t => t.trim()).filter(t => t !== '');
+    onCreate(content, tags, selectedAuthorId);
+    setContent('');
+    setTagInput('');
+  };
+
+  return (
+    <section className="animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-6xl mx-auto">
+      <div className="flex items-center gap-3 mb-8 px-4">
+        <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
+          <BookMarked className="w-6 h-6 text-white" />
+        </div>
+        <div>
+          <h2 className={`text-2xl font-black ${isDarkMode ? 'text-white' : 'text-slate-800'} tracking-tighter uppercase`}>빌더 로그 (Builder's Log)</h2>
+          <p className="text-slate-400 font-bold text-xs">수행 과정에서의 짧은 생각, 이슈, 핵심 메모를 기록하세요.</p>
+        </div>
+      </div>
+
+      <div className={`mb-10 p-8 rounded-[2.5rem] border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100 shadow-sm'} transition-all`}>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="flex flex-col sm:flex-row gap-6">
+            <div className="w-full sm:w-64">
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 px-1">기록자 선택</label>
+              <select 
+                value={selectedAuthorId}
+                onChange={(e) => setSelectedAuthorId(e.target.value)}
+                className={`w-full px-4 py-3.5 rounded-2xl border font-bold text-sm ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-100 text-slate-800 focus:bg-white'} outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all`}
+              >
+                <option value="">본인 이름을 선택하세요</option>
+                {members.map(member => (
+                  <option key={member.id} value={member.id}>{member.name}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div className="flex-1">
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 px-1">수행 중인 메모 내용</label>
+              <textarea
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                placeholder="어떤 일을 수행하셨나요? 핵심 이슈나 아이디어를 기록하세요."
+                className={`w-full min-h-[120px] p-5 rounded-2xl border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-100' : 'bg-slate-50 border-slate-100 text-slate-800 focus:bg-white'} outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-bold text-base resize-none`}
+              />
+            </div>
+          </div>
+          
+          <div className="flex flex-col sm:flex-row gap-4 items-center pl-0 sm:pl-[280px]">
+            <div className="relative flex-1 w-full">
+              <Hash className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input
+                type="text"
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                placeholder="태그 (예: 이슈, 해결방안, 팁 - 쉼표로 구분)"
+                className={`w-full pl-10 pr-4 py-3.5 rounded-xl border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-100' : 'bg-slate-50 border-slate-100 text-slate-800 focus:bg-white'} outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-bold text-sm`}
+              />
+            </div>
+            <button 
+              type="submit"
+              className="w-full sm:w-auto bg-indigo-600 text-white px-10 py-3.5 rounded-xl font-black shadow-lg shadow-indigo-500/20 hover:bg-indigo-700 active:scale-95 transition-all text-sm"
+            >
+              로그 남기기
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 px-2">
+        {memos.map(memo => {
+          const author = members.find(m => m.id === memo.authorId);
+          return (
+            <motion.div 
+              layout
+              key={memo.id} 
+              className={`p-6 rounded-3xl border relative group transition-all ${isDarkMode ? 'bg-slate-900 border-slate-800 hover:border-indigo-800/50' : 'bg-white border-slate-200 hover:border-indigo-200 hover:shadow-md'}`}
+            >
+              <button 
+                onClick={() => onDelete(memo.id)}
+                className="absolute top-4 right-4 text-slate-300 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+              
+              <div className="flex items-center gap-3 mb-4">
+                <img src={author?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=anon`} className="w-8 h-8 rounded-full border border-slate-100 dark:border-slate-800" referrerPolicy="no-referrer" />
+                <div>
+                  <div className={`text-[11px] font-black tracking-wider uppercase ${isDarkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>{author?.name || '익명 빌더'}</div>
+                  <div className="text-[9px] text-slate-400 font-bold">{new Date(memo.createdAt).toLocaleString()}</div>
+                </div>
+              </div>
+
+              <p className={`text-sm font-bold leading-relaxed mb-4 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>{memo.content}</p>
+              
+              <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                {memo.tags.map(tag => (
+                  <span key={tag} className={`text-[10px] font-black px-2 py-1 rounded-lg ${isDarkMode ? 'bg-slate-800 text-indigo-400' : 'bg-indigo-50 text-indigo-600'}`}>
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+            </motion.div>
+          );
+        })}
+      </div>
+      
+      {memos.length === 0 && (
+        <div className="text-center py-20 bg-slate-50 dark:bg-slate-900/50 rounded-[3rem] border border-dashed border-slate-200 dark:border-slate-800">
+          <BookMarked className="w-12 h-12 text-slate-200 dark:text-slate-700 mx-auto mb-4" />
+          <p className="text-slate-400 font-bold">아직 기록된 빌더 로그가 없습니다.</p>
+        </div>
+      )}
+    </section>
+  );
+};
 
 export const Board = ({ 
   title,

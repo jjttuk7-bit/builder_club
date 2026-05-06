@@ -92,3 +92,11 @@ export interface MarketingComment {
   content: string;
   createdAt: string;
 }
+
+export interface BuilderMemo {
+  id: string;
+  authorId: string;
+  content: string;
+  tags: string[];
+  createdAt: string;
+}

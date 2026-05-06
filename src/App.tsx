@@ -19,7 +19,8 @@ import {
   Search,
   BookOpen,
   Calendar,
-  Settings
+  Settings,
+  BookMarked
 } from 'lucide-react';
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
@@ -30,7 +31,8 @@ import {
   KnowhowSection, 
   MeetingBoard,
   ActivityFeed,
-  Board
+  Board,
+  BuilderLog
 } from './components/dashboard';
 import { Modal } from './components/ui/modal';
 import { supabase } from './lib/supabase';
@@ -47,7 +49,8 @@ import {
   FreeBoardPost, 
   FreeBoardComment,
   MarketingPost,
-  MarketingComment
+  MarketingComment,
+  BuilderMemo
 } from './types';
 
 export default function App() {
@@ -71,6 +74,7 @@ export default function App() {
   const [comments, setComments] = useState<FreeBoardComment[]>([]);
   const [marketingPosts, setMarketingPosts] = useState<MarketingPost[]>([]);
   const [marketingComments, setMarketingComments] = useState<MarketingComment[]>([]);
+  const [memos, setMemos] = useState<BuilderMemo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Supabase Data Fetching
@@ -164,6 +168,16 @@ export default function App() {
           authorId: c.author_id,
           content: c.content,
           createdAt: c.created_at
+        })));
+
+        // Fetch Memo Data
+        const { data: memoData } = await supabase.from('builder_memos').select('*').order('created_at', { ascending: false });
+        if (memoData) setMemos(memoData.map(m => ({
+          id: m.id,
+          authorId: m.author_id,
+          content: m.content,
+          tags: m.tags || [],
+          createdAt: m.created_at
         })));
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -366,6 +380,48 @@ export default function App() {
     } catch (error) {
       console.error('Error deleting marketing comment:', error);
       setMarketingComments(marketingComments.filter(c => c.id !== id));
+    }
+  };
+
+  const handleCreateMemo = async (content: string, tags: string[], authorId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('builder_memos')
+        .insert([{ content, tags, author_id: authorId, created_at: new Date().toISOString() }])
+        .select();
+      
+      if (error) throw error;
+      if (data) {
+        setMemos([{
+          id: data[0].id,
+          authorId: data[0].author_id,
+          content: data[0].content,
+          tags: data[0].tags || [],
+          createdAt: data[0].created_at
+        }, ...memos]);
+      }
+    } catch (error) {
+      console.error('Error creating memo:', error);
+      const newMemo: BuilderMemo = {
+        id: Math.random().toString(36).substring(2, 9),
+        authorId: authorId,
+        content,
+        tags,
+        createdAt: new Date().toISOString()
+      };
+      setMemos([newMemo, ...memos]);
+    }
+  };
+
+  const handleDeleteMemo = async (id: string) => {
+    if (!window.confirm('이 메모를 삭제하시겠습니까?')) return;
+    try {
+      const { error } = await supabase.from('builder_memos').delete().eq('id', id);
+      if (error) throw error;
+      setMemos(memos.filter(m => m.id !== id));
+    } catch (error) {
+      console.error('Error deleting memo:', error);
+      setMemos(memos.filter(m => m.id !== id));
     }
   };
 
@@ -878,6 +934,7 @@ export default function App() {
       items: [
         { name: '프로젝트 현황', icon: Briefcase },
         { name: '마케팅 실행', icon: Rocket },
+        { name: '빌더 로그', icon: BookMarked },
         { name: '지식 공유', icon: Tag },
       ]
     },
@@ -993,6 +1050,16 @@ export default function App() {
             onCreate={handleCreateMarketingPost}
             onDeleteComment={handleDeleteMarketingComment}
             onCreateComment={handleCreateMarketingComment}
+            isDarkMode={isDarkMode}
+          />
+        );
+      case '빌더 로그':
+        return (
+          <BuilderLog 
+            memos={memos}
+            members={members}
+            onDelete={handleDeleteMemo}
+            onCreate={handleCreateMemo}
             isDarkMode={isDarkMode}
           />
         );
