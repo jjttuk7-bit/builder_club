@@ -15,6 +15,7 @@ import {
   Briefcase
 } from 'lucide-react';
 import React, { useState } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { motion } from 'motion/react';
 import { 
   Header,
@@ -134,6 +135,7 @@ export default function App() {
   const [isKnowhowModalOpen, setKnowhowModalOpen] = useState(false);
   const [isKnowhowViewModalOpen, setKnowhowViewModalOpen] = useState(false);
   const [selectedKnowhow, setSelectedKnowhow] = useState<Knowhow | null>(null);
+  const [knowhowModalTab, setKnowhowModalTab] = useState<'write' | 'preview'>('write');
   const [isMeetingModalOpen, setMeetingModalOpen] = useState(false);
   const [meetingModalType, setMeetingModalType] = useState<'schedule' | 'question' | 'title_principle'>('schedule');
 
@@ -941,8 +943,14 @@ export default function App() {
 
               <div>
                 <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">상세 내용</h4>
-                <div className={`p-8 rounded-[2rem] border ${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-300' : 'bg-white border-slate-200 text-slate-700 shadow-sm'} font-medium leading-loose whitespace-pre-wrap`}>
-                  {selectedKnowhow.content || '작성된 상세 내용이 없습니다.'}
+                <div className={`p-8 rounded-[2rem] border ${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-300' : 'bg-white border-slate-200 text-slate-700 shadow-sm'} font-medium leading-loose`}>
+                  <div className="markdown-content prose dark:prose-invert max-w-none">
+                    {selectedKnowhow.content ? (
+                      <ReactMarkdown>{selectedKnowhow.content}</ReactMarkdown>
+                    ) : (
+                      <span className="text-slate-400">작성된 상세 내용이 없습니다.</span>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -965,6 +973,7 @@ export default function App() {
           isOpen={isKnowhowModalOpen}
           onClose={() => {
             setKnowhowModalOpen(false);
+            setKnowhowModalTab('write');
             setNewKnowhow({
               authorId: '',
               title: '',
@@ -976,67 +985,99 @@ export default function App() {
           title={newKnowhow.id ? '노하우 수정' : '노하우 아카이빙'}
           maxWidth="xl"
         >
+          <div className="mb-6 flex gap-2">
+            <button 
+              onClick={() => setKnowhowModalTab('write')}
+              className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${knowhowModalTab === 'write' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}
+            >
+              편집
+            </button>
+            <button 
+              onClick={() => setKnowhowModalTab('preview')}
+              className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${knowhowModalTab === 'preview' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}
+            >
+              미리보기
+            </button>
+          </div>
+
           <form onSubmit={handleAddKnowhow} className="space-y-6 max-h-[75vh] overflow-y-auto pr-4 custom-scrollbar">
-            <div className="grid grid-cols-2 gap-6">
-              <div>
-                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">작성자</label>
-                <input 
-                  type="text" 
-                  list="members-list"
-                  value={newKnowhow.authorId}
-                  onChange={(e) => setNewKnowhow({...newKnowhow, authorId: e.target.value})}
-                  placeholder="작성자 성함을 입력하세요"
-                  className={`w-full px-6 py-4 rounded-2xl border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white focus:ring-blue-900/40' : 'bg-white border-slate-200 focus:ring-blue-50'} outline-none focus:ring-4 font-bold transition-all`}
-                  required
-                />
-                <datalist id="members-list">
-                  {members.map(m => <option key={m.id} value={m.name} />)}
-                </datalist>
+            {knowhowModalTab === 'write' ? (
+              <>
+                <div className="grid grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">작성자</label>
+                    <input 
+                      type="text" 
+                      list="members-list"
+                      value={newKnowhow.authorId}
+                      onChange={(e) => setNewKnowhow({...newKnowhow, authorId: e.target.value})}
+                      placeholder="작성자 성함을 입력하세요"
+                      className={`w-full px-6 py-4 rounded-2xl border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white focus:ring-blue-900/40' : 'bg-white border-slate-200 focus:ring-blue-50'} outline-none focus:ring-4 font-bold transition-all`}
+                      required
+                    />
+                    <datalist id="members-list">
+                      {members.map(m => <option key={m.id} value={m.name} />)}
+                    </datalist>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">분야 선택</label>
+                    <select 
+                      value={newKnowhow.category}
+                      onChange={(e) => setNewKnowhow({...newKnowhow, category: e.target.value})}
+                      className={`w-full px-6 py-4 rounded-2xl border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white focus:ring-blue-900/40' : 'bg-white border-slate-200 focus:ring-blue-50'} outline-none focus:ring-4 font-bold transition-all`}
+                    >
+                      {['개발', '코딩', '프롬프트', '디자인', '기획', '마케팅', '비즈니스', '투자/지표', '기타'].map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">지식의 열쇠 (제목)</label>
+                  <input 
+                    type="text" 
+                    value={newKnowhow.title}
+                    onChange={(e) => setNewKnowhow({...newKnowhow, title: e.target.value})}
+                    className={`w-full px-6 py-4 rounded-2xl border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white focus:ring-blue-900/40' : 'bg-white border-slate-200 focus:ring-blue-50'} outline-none focus:ring-4 font-black transition-all`}
+                    placeholder="노하우의 핵심 주제를 입력하세요"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">핵심 요약</label>
+                  <input 
+                    type="text" 
+                    value={newKnowhow.summary}
+                    onChange={(e) => setNewKnowhow({...newKnowhow, summary: e.target.value})}
+                    className={`w-full px-6 py-4 rounded-2xl border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white focus:ring-blue-900/40' : 'bg-white border-slate-200 focus:ring-blue-50'} outline-none focus:ring-4 font-bold transition-all`}
+                    placeholder="간략하게 한 줄로 설명해 주세요"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">상세 내용 (Markdown 지원)</label>
+                  <textarea 
+                    value={newKnowhow.content}
+                    onChange={(e) => setNewKnowhow({...newKnowhow, content: e.target.value})}
+                    className={`w-full px-6 py-4 rounded-2xl border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white focus:ring-blue-900/40' : 'bg-white border-slate-200 focus:ring-blue-50'} outline-none focus:ring-4 h-64 font-medium leading-relaxed transition-all resize-none`}
+                    placeholder="마크다운 형식을 사용하여 상세한 노하우를 입력하세요. # 제목, - 목록 등을 사용할 수 있습니다."
+                  />
+                </div>
+              </>
+            ) : (
+              <div className="space-y-6 animate-in fade-in duration-300">
+                <div className="bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-8 min-h-[400px]">
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 border-b border-slate-200 dark:border-slate-800 pb-3">미리보기</h4>
+                  <div className={`prose dark:prose-invert max-w-none ${isDarkMode ? 'text-slate-300' : 'text-slate-700'} font-medium`}>
+                    {newKnowhow.content ? (
+                      <ReactMarkdown>{newKnowhow.content}</ReactMarkdown>
+                    ) : (
+                      <div className="text-slate-400 italic text-center pt-20">내용을 입력하면 여기에 미리보기가 표시됩니다.</div>
+                    )}
+                  </div>
+                </div>
               </div>
-              <div>
-                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">분야 선택</label>
-                <select 
-                  value={newKnowhow.category}
-                  onChange={(e) => setNewKnowhow({...newKnowhow, category: e.target.value})}
-                  className={`w-full px-6 py-4 rounded-2xl border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white focus:ring-blue-900/40' : 'bg-white border-slate-200 focus:ring-blue-50'} outline-none focus:ring-4 font-bold transition-all`}
-                >
-                  {['개발', '코딩', '프롬프트', '디자인', '기획', '마케팅', '비즈니스', '투자/지표', '기타'].map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <div>
-              <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">지식의 열쇠 (제목)</label>
-              <input 
-                type="text" 
-                value={newKnowhow.title}
-                onChange={(e) => setNewKnowhow({...newKnowhow, title: e.target.value})}
-                className={`w-full px-6 py-4 rounded-2xl border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white focus:ring-blue-900/40' : 'bg-white border-slate-200 focus:ring-blue-50'} outline-none focus:ring-4 font-black transition-all`}
-                placeholder="노하우의 핵심 주제를 입력하세요"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">핵심 요약</label>
-              <input 
-                type="text" 
-                value={newKnowhow.summary}
-                onChange={(e) => setNewKnowhow({...newKnowhow, summary: e.target.value})}
-                className={`w-full px-6 py-4 rounded-2xl border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white focus:ring-blue-900/40' : 'bg-white border-slate-200 focus:ring-blue-50'} outline-none focus:ring-4 font-bold transition-all`}
-                placeholder="간략하게 한 줄로 설명해 주세요"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">상세 내용 (선택)</label>
-              <textarea 
-                value={newKnowhow.content}
-                onChange={(e) => setNewKnowhow({...newKnowhow, content: e.target.value})}
-                className={`w-full px-6 py-4 rounded-2xl border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white focus:ring-blue-900/40' : 'bg-white border-slate-200 focus:ring-blue-50'} outline-none focus:ring-4 h-64 font-medium leading-relaxed transition-all resize-none`}
-                placeholder="동료들과 공유하고 싶은 상세한 노하우 내용을 입력해 주세요."
-              />
-            </div>
+            )}
             <button className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black shadow-xl shadow-blue-500/20 hover:bg-blue-700 transition-all text-lg">
               {newKnowhow.id ? '수정 완료' : '지식 저장하기'}
             </button>
