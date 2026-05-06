@@ -820,6 +820,7 @@ export default function App() {
           isOpen={isProjectDetailModalOpen}
           onClose={() => setProjectDetailModalOpen(false)}
           title={selectedProject?.title || '프로젝트 상세 정보'}
+          maxWidth="4xl"
         >
           {selectedProject && (
             <div className="space-y-8 max-h-[80vh] overflow-y-auto pr-4 custom-scrollbar">
@@ -973,8 +974,9 @@ export default function App() {
             });
           }}
           title={newKnowhow.id ? '노하우 수정' : '노하우 아카이빙'}
+          maxWidth="xl"
         >
-          <form onSubmit={handleAddKnowhow} className="space-y-6">
+          <form onSubmit={handleAddKnowhow} className="space-y-6 max-h-[75vh] overflow-y-auto pr-4 custom-scrollbar">
             <div className="grid grid-cols-2 gap-6">
               <div>
                 <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">작성자</label>
@@ -1146,8 +1148,9 @@ export default function App() {
           isOpen={isProjectModalOpen} 
           onClose={() => setProjectModalOpen(false)} 
           title={newProject.id ? "프로젝트 정보 수정" : "새 프로젝트 하우스"}
+          maxWidth="2xl"
         >
-          <form onSubmit={handleAddProject} className="space-y-8">
+          <form onSubmit={handleAddProject} className="space-y-8 max-h-[75vh] overflow-y-auto pr-4 custom-scrollbar">
             <div className="grid grid-cols-2 gap-6">
               <div className="col-span-2">
                 <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">프로젝트 리더 (멤버 이름)</label>
