@@ -18,7 +18,8 @@ import {
   Tag,
   Monitor,
   Moon,
-  Sun
+  Sun,
+  Activity
 } from 'lucide-react';
 import React from 'react';
 import { Project, Knowhow, Member, Meeting } from '../types';
@@ -68,6 +69,75 @@ export const Header = ({ isDarkMode, onToggleDarkMode }: HeaderProps) => {
         </button>
       </div>
     </header>
+  );
+};
+
+// --- Activity Feed ---
+interface ActivityItem {
+  id: string;
+  type: 'project_update' | 'new_knowhow' | 'new_feedback';
+  user: { name: string; avatar: string };
+  target: string;
+  timestamp: string;
+}
+
+export const ActivityFeed = ({ projects, knowhows, members }: { projects: Project[]; knowhows: Knowhow[]; members: Member[] }) => {
+  // Generate mock-real activities combining latest data
+  const activities: ActivityItem[] = [
+    ...projects.flatMap(p => (p.feedbacks || []).map(f => ({
+      id: f.id,
+      type: 'new_feedback' as const,
+      user: { 
+        name: members.find(m => m.id === f.authorId)?.name || 'Unknown', 
+        avatar: members.find(m => m.id === f.authorId)?.avatarUrl || ''
+      },
+      target: `Project: ${p.title}`,
+      timestamp: f.createdAt
+    }))),
+    ...knowhows.slice(0, 3).map(k => ({
+      id: k.id,
+      type: 'new_knowhow' as const,
+      user: {
+        name: members.find(m => m.id === k.authorId)?.name || 'Unknown',
+        avatar: members.find(m => m.id === k.authorId)?.avatarUrl || ''
+      },
+      target: `Knowhow: ${k.title}`,
+      timestamp: new Date().toISOString() // Mocked for display
+    }))
+  ].sort((a, b) => {
+    const timeA = new Date(a.timestamp).getTime();
+    const timeB = new Date(b.timestamp).getTime();
+    const validB = isNaN(timeB) ? 0 : timeB;
+    const validA = isNaN(timeA) ? 0 : timeA;
+    return validB - validA;
+  }).slice(0, 5);
+
+  return (
+    <section className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[3rem] p-8 mb-12 shadow-sm">
+      <div className="flex items-center justify-between mb-8">
+        <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-tighter flex items-center gap-2">
+          <Activity className="w-5 h-5 text-blue-600" />
+          최근 커뮤니티 활동 (LIVE)
+        </h3>
+      </div>
+      <div className="flex gap-6 overflow-x-auto pb-4 custom-scrollbar">
+        {activities.map(act => (
+          <div key={act.id} className="flex-shrink-0 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 p-4 rounded-2xl flex items-center gap-4 min-w-[300px]">
+            <img src={act.user.avatar} alt={act.user.name} className="w-10 h-10 rounded-full border-2 border-white dark:border-slate-800" />
+            <div className="flex-1">
+              <div className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-1">
+                {act.type === 'new_feedback' ? '새 댓글' : act.type === 'new_knowhow' ? '새 지식공유' : '업데이트'}
+              </div>
+              <div className="text-[11px] font-black text-slate-800 dark:text-slate-200 line-clamp-1">{act.target}</div>
+              <div className="text-[10px] font-bold text-slate-400 italic">by {act.user.name}</div>
+            </div>
+          </div>
+        ))}
+        {activities.length === 0 && (
+          <div className="text-center py-4 text-slate-400 font-bold text-sm">최근 활동이 없습니다.</div>
+        )}
+      </div>
+    </section>
   );
 };
 
@@ -243,9 +313,20 @@ export const ProjectBoard = ({ projects, onDelete, onEdit, onViewDetail, members
                     className="w-10 h-10 rounded-full border-2 border-white dark:border-slate-800 shadow-sm"
                     referrerPolicy="no-referrer"
                   />
-                  <h3 className="text-xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">
-                    {member.name}'s Space
-                  </h3>
+                  <div className="flex flex-col">
+                    <h3 className="text-xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">
+                      {member.name}'s Space
+                    </h3>
+                    {member.specialties && member.specialties.length > 0 && (
+                      <div className="flex gap-1 mt-1">
+                        {member.specialties.map(tag => (
+                          <span key={tag} className="px-2 py-0.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-[9px] font-black rounded-md border border-blue-100 dark:border-blue-900/40 uppercase tracking-widest">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800 ml-4"></div>
                   <button 
                     onClick={() => onAddProject?.(member.id)}

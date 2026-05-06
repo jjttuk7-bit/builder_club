@@ -8,12 +8,20 @@ export interface Member {
   name: string;
   role: string;
   avatarUrl: string;
+  specialties?: string[];
 }
 
 export interface Milestone {
   week: number;
   content: string;
-  status: '기획' | '진행중' | '완료';
+  status: '준비중' | '진행중' | '완료';
+}
+
+export interface ProjectFeedback {
+  id: string;
+  authorId: string;
+  content: string;
+  createdAt: string;
 }
 
 export interface Project {
@@ -32,6 +40,7 @@ export interface Project {
   actionType: 'demo' | 'link' | 'none';
   actionLabel: string;
   milestones?: Milestone[];
+  feedbacks?: ProjectFeedback[];
 }
 
 export interface Knowhow {

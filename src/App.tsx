@@ -12,7 +12,9 @@ import {
   Trash2,
   User as UserIcon,
   Tag,
-  Briefcase
+  Briefcase,
+  Activity,
+  MessageSquare
 } from 'lucide-react';
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
@@ -21,7 +23,8 @@ import {
   Header,
   ProjectBoard, 
   KnowhowSection, 
-  MeetingBoard 
+  MeetingBoard,
+  ActivityFeed
 } from './components/dashboard';
 import { Modal } from './components/ui/modal';
 import { supabase } from './lib/supabase';
@@ -29,10 +32,16 @@ import { projects as initialProjects } from './data/projects';
 import { knowhows as initialKnowhows } from './data/knowhows';
 import { members as initialMembers } from './data/members';
 import { meeting as initialMeeting } from './data/meeting';
-import { Project, Knowhow, Member, Meeting } from './types';
+import { Project, Knowhow, Member, Meeting, ProjectFeedback } from './types';
 
 export default function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    try {
+      return sessionStorage.getItem('isClubAuthenticated') === 'true';
+    } catch (e) {
+      return false;
+    }
+  });
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -55,7 +64,8 @@ export default function App() {
           id: m.id,
           name: m.name,
           role: m.role,
-          avatarUrl: m.avatar_url
+          avatarUrl: m.avatar_url,
+          specialties: m.specialties || []
         })));
 
         // Fetch Projects
@@ -75,7 +85,8 @@ export default function App() {
           helpRequest: p.help_request,
           actionType: p.action_type,
           actionLabel: p.action_label,
-          milestones: p.milestones || []
+          milestones: p.milestones || [],
+          feedbacks: p.feedbacks || []
         })));
 
         // Fetch Knowhows
@@ -111,9 +122,15 @@ export default function App() {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === CORRECT_PASSWORD) {
+    const inputPassword = password.trim();
+    if (inputPassword === CORRECT_PASSWORD) {
       setIsAuthenticated(true);
       setLoginError(false);
+      try {
+        sessionStorage.setItem('isClubAuthenticated', 'true');
+      } catch (e) {
+        console.error("Session storage error", e);
+      }
     } else {
       setLoginError(true);
     }
@@ -123,6 +140,7 @@ export default function App() {
     if (window.confirm('로그아웃 하시겠습니까?')) {
       setIsAuthenticated(false);
       setPassword('');
+      sessionStorage.removeItem('isClubAuthenticated');
       setActiveTab('종합 대시보드');
     }
   };
@@ -140,6 +158,7 @@ export default function App() {
   const [meetingModalType, setMeetingModalType] = useState<'schedule' | 'question' | 'title_principle'>('schedule');
 
   const [newMemberName, setNewMemberName] = useState('');
+  const [newMemberSpecialties, setNewMemberSpecialties] = useState('');
   const [newProject, setNewProject] = useState<Partial<Project>>({
     ownerId: '',
     title: '',
@@ -163,6 +182,33 @@ export default function App() {
     summary: '',
     content: ''
   });
+  const [feedbackContent, setFeedbackContent] = useState('');
+
+  const handleAddFeedback = async (projectId: string) => {
+    if (!feedbackContent.trim()) return;
+
+    const feedback: ProjectFeedback = {
+      id: `f${Date.now()}`,
+      authorId: 'u1', // Default or logical author id
+      content: feedbackContent,
+      createdAt: new Date().toISOString()
+    };
+
+    const project = projects.find(p => p.id === projectId);
+    if (!project) return;
+
+    const updatedFeedbacks = [...(project.feedbacks || []), feedback];
+
+    const { error } = await supabase.from('projects').update({
+      feedbacks: updatedFeedbacks
+    }).eq('id', projectId);
+
+    if (!error) {
+      setProjects(prev => prev.map(p => p.id === projectId ? { ...p, feedbacks: updatedFeedbacks } : p));
+      setSelectedProject(prev => prev?.id === projectId ? { ...prev, feedbacks: updatedFeedbacks } : prev);
+      setFeedbackContent('');
+    }
+  };
   const [meetingForm, setMeetingForm] = useState({
     time: '',
     activity: '',
@@ -285,23 +331,29 @@ export default function App() {
   const handleAddMember = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMemberName.trim()) return;
+    
+    const specialties = newMemberSpecialties.split(',').map(s => s.trim()).filter(s => s !== '');
+    
     const newMember: Member = {
       id: `${Date.now()}`,
       name: newMemberName,
       role: 'Builder',
-      avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${newMemberName}`
+      avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${newMemberName}`,
+      specialties: specialties
     };
 
     const { error } = await supabase.from('members').insert({
       id: newMember.id,
       name: newMember.name,
       role: newMember.role,
-      avatar_url: newMember.avatarUrl
+      avatar_url: newMember.avatarUrl,
+      specialties: specialties
     });
 
     if (!error) {
       setMembers([...members, newMember]);
       setNewMemberName('');
+      setNewMemberSpecialties('');
       setMemberModalOpen(false);
     } else {
       alert('멤버 추가 중 오류가 발생했습니다.');
@@ -567,7 +619,20 @@ export default function App() {
     switch (activeTab) {
       case '종합 대시보드':
         return (
-          <div className="space-y-12">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-12">
+            <ActivityFeed projects={projects} knowhows={knowhows} members={members} />
+            
+            <div className="flex items-center justify-between px-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/20">
+                  <LayoutDashboard className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-3xl font-black text-slate-800 dark:text-white tracking-tighter uppercase">Global Dashboard</h2>
+                  <p className="text-slate-400 font-bold text-sm">빌더 클럽의 실시간 프로젝트 현황입니다.</p>
+                </div>
+              </div>
+            </div>
             {projects.length > 0 ? (
               <ProjectBoard 
                 projects={projects} 
@@ -612,7 +677,7 @@ export default function App() {
                 />
               </div>
             </div>
-          </div>
+          </motion.div>
         );
       case '멤버별 스페이스':
         return (
@@ -728,6 +793,16 @@ export default function App() {
         return null;
     }
   };
+
+  // --- Global Loading Gating ---
+  if (isLoading && !isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
+        <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+        <p className="text-slate-500 font-bold animate-pulse">빌더 클럽 공간을 불러오는 중...</p>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return (
@@ -912,6 +987,55 @@ export default function App() {
                     Created by {members.find(m => m.id === selectedProject.ownerId)?.name || selectedProject.ownerId}
                   </div>
                   <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Project Owner</div>
+                </div>
+              </div>
+
+              {/* Feedback Section */}
+              <div className="pt-8 border-t border-slate-100 dark:border-slate-800 space-y-6">
+                <h4 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-tighter flex items-center gap-2">
+                  <MessageSquare className="w-5 h-5 text-blue-600" />
+                  동료들의 피드백 ({selectedProject.feedbacks?.length || 0})
+                </h4>
+                
+                <div className="space-y-4">
+                  {selectedProject.feedbacks?.map((fb) => {
+                    const fbAuthor = members.find(m => m.id === fb.authorId);
+                    return (
+                      <div key={fb.id} className="bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 p-6 rounded-2xl flex gap-4">
+                        <img 
+                          src={fbAuthor?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${fb.authorId}`} 
+                          alt="fbAuthor" 
+                          className="w-8 h-8 rounded-full"
+                          referrerPolicy="no-referrer"
+                        />
+                        <div className="flex-1">
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="text-xs font-black text-slate-800 dark:text-slate-200">{fbAuthor?.name || fb.authorId}</span>
+                            <span className="text-[10px] font-bold text-slate-400">{new Date(fb.createdAt).toLocaleDateString()}</span>
+                          </div>
+                          <p className="text-sm font-medium text-slate-600 dark:text-slate-400 leading-relaxed">
+                            {fb.content}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  
+                  <div className="mt-6 flex gap-3">
+                    <input 
+                      type="text"
+                      value={feedbackContent}
+                      onChange={(e) => setFeedbackContent(e.target.value)}
+                      placeholder="프로젝트에 대해 응원이나 피드백을 남겨주세요!"
+                      className={`flex-1 px-6 py-3 rounded-xl border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white focus:ring-blue-900/40' : 'bg-white border-slate-200 focus:ring-blue-50'} outline-none focus:ring-4 font-bold transition-all text-sm`}
+                    />
+                    <button 
+                      onClick={() => handleAddFeedback(selectedProject.id)}
+                      className="px-6 py-3 bg-blue-600 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20"
+                    >
+                      등록
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1177,6 +1301,16 @@ export default function App() {
                 className={`w-full px-6 py-4 rounded-2xl border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white focus:ring-blue-900/40' : 'bg-white border-slate-200 focus:ring-blue-50'} outline-none focus:ring-4 font-black transition-all`}
                 autoFocus
                 required
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">전문 분야 (쉼표로 구분)</label>
+              <input 
+                type="text" 
+                value={newMemberSpecialties}
+                onChange={(e) => setNewMemberSpecialties(e.target.value)}
+                placeholder="예: React, 디자인, 기획"
+                className={`w-full px-6 py-4 rounded-2xl border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white focus:ring-blue-900/40' : 'bg-white border-slate-200 focus:ring-blue-50'} outline-none focus:ring-4 font-bold transition-all`}
               />
             </div>
             <button className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black shadow-xl shadow-blue-500/10 hover:bg-blue-700 transition-all">
