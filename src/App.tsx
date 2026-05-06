@@ -29,6 +29,25 @@ import ReactMarkdown from 'react-markdown';
 import { motion } from 'motion/react';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
+
+const LinkifyText = ({ text, className = 'text-blue-500 hover:underline' }: { text: string, className?: string }) => {
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts = text.split(urlRegex);
+  return (
+    <>
+      {parts.map((part, i) => 
+        urlRegex.test(part) ? (
+          <a key={i} href={part} target="_blank" rel="noopener noreferrer" className={className}>
+            {part}
+          </a>
+        ) : (
+          part
+        )
+      )}
+    </>
+  );
+};
+
 import { 
   Header,
   ProjectBoard, 
@@ -84,20 +103,34 @@ export default function App() {
   // Supabase Data Fetching
   React.useEffect(() => {
     const fetchData = async () => {
+      // Check if Supabase is properly configured via environment variables
+      const rawUrl = import.meta.env.VITE_SUPABASE_URL;
+      const isPlaceholder = !rawUrl || rawUrl.includes('placeholder.supabase.co');
+      
+      if (isPlaceholder) {
+        console.warn('Supabase is not configured. Data will not be persisted.');
+        setIsLoading(false);
+        return;
+      }
+
       setIsLoading(true);
       try {
         // Fetch Members
-        const { data: mData } = await supabase.from('members').select('*');
-        if (mData) setMembers(mData.map(m => ({
-          id: m.id,
-          name: m.name,
-          role: m.role,
-          avatarUrl: m.avatar_url,
-          specialties: m.specialties || []
-        })));
+        const { data: mData, error: mError } = await supabase.from('members').select('*');
+        if (mError) throw mError;
+        if (mData && mData.length > 0) {
+          setMembers(mData.map(m => ({
+            id: m.id,
+            name: m.name,
+            role: m.role,
+            avatarUrl: m.avatar_url,
+            specialties: m.specialties || []
+          })));
+        }
 
         // Fetch Projects
-        const { data: pData } = await supabase.from('projects').select('*');
+        const { data: pData, error: pError } = await supabase.from('projects').select('*');
+        if (pError) throw pError;
         if (pData) setProjects(pData.map(p => ({
           id: p.id,
           ownerId: p.owner_id,
@@ -118,7 +151,8 @@ export default function App() {
         })));
 
         // Fetch Knowhows
-        const { data: kData } = await supabase.from('knowhows').select('*');
+        const { data: kData, error: kError } = await supabase.from('knowhows').select('*');
+        if (kError) throw kError;
         if (kData) setKnowhows(kData.map(k => ({
           id: k.id,
           authorId: k.author_id,
@@ -129,7 +163,8 @@ export default function App() {
         })));
 
         // Fetch Posts
-        const { data: psData } = await supabase.from('posts').select('*').order('created_at', { ascending: false });
+        const { data: psData, error: psError } = await supabase.from('posts').select('*').order('created_at', { ascending: false });
+        if (psError) throw psError;
         if (psData) setPosts(psData.map(p => ({
           id: p.id,
           authorId: p.author_id,
@@ -138,7 +173,8 @@ export default function App() {
         })));
 
         // Fetch Comments
-        const { data: cmData } = await supabase.from('comments').select('*').order('created_at', { ascending: true });
+        const { data: cmData, error: cmError } = await supabase.from('comments').select('*').order('created_at', { ascending: true });
+        if (cmError) throw cmError;
         if (cmData) setComments(cmData.map(c => ({
           id: c.id,
           postId: c.post_id,
@@ -148,16 +184,20 @@ export default function App() {
         })));
 
         // Fetch Meeting Info
-        const { data: mtData } = await supabase.from('meeting_info').select('*').single();
-        if (mtData) setMeeting({
-          title: mtData.title,
-          principle: mtData.principle,
-          schedule: mtData.schedule,
-          commonQuestions: mtData.common_questions
-        });
+        const { data: mtData } = await supabase.from('meeting_info').select('*').limit(1);
+        if (mtData && mtData.length > 0) {
+          const m = mtData[0];
+          setMeeting({
+            title: m.title,
+            principle: m.principle,
+            schedule: m.schedule || [],
+            commonQuestions: m.common_questions || []
+          });
+        }
 
         // Fetch Marketing Data
-        const { data: mpsData } = await supabase.from('marketing_posts').select('*').order('created_at', { ascending: false });
+        const { data: mpsData, error: mpsError } = await supabase.from('marketing_posts').select('*').order('created_at', { ascending: false });
+        if (mpsError) throw mpsError;
         if (mpsData) setMarketingPosts(mpsData.map(p => ({
           id: p.id,
           authorId: p.author_id,
@@ -165,7 +205,8 @@ export default function App() {
           createdAt: p.created_at
         })));
 
-        const { data: mcmData } = await supabase.from('marketing_comments').select('*').order('created_at', { ascending: true });
+        const { data: mcmData, error: mcmError } = await supabase.from('marketing_comments').select('*').order('created_at', { ascending: true });
+        if (mcmError) throw mcmError;
         if (mcmData) setMarketingComments(mcmData.map(c => ({
           id: c.id,
           postId: c.post_id,
@@ -175,7 +216,8 @@ export default function App() {
         })));
 
         // Fetch Memo Data
-        const { data: memoData } = await supabase.from('builder_memos').select('*').order('created_at', { ascending: false });
+        const { data: memoData, error: memoError } = await supabase.from('builder_memos').select('*').order('created_at', { ascending: false });
+        if (memoError) throw memoError;
         if (memoData) setMemos(memoData.map(m => ({
           id: m.id,
           authorId: m.author_id,
@@ -184,8 +226,12 @@ export default function App() {
           tags: m.tags || [],
           createdAt: m.created_at
         })));
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error fetching data:', error);
+        // Only alert once on initial load failure
+        if (error.message !== 'Failed to fetch') {
+           alert(`데이터를 불러오는 중 오류가 발생했습니다: ${error.message}`);
+        }
       } finally {
         setIsLoading(false);
       }
@@ -237,16 +283,9 @@ export default function App() {
           createdAt: data[0].created_at
         }, ...posts]);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating post:', error);
-      // Fallback for demo
-      const newPost: FreeBoardPost = {
-        id: Math.random().toString(36).substring(2, 9),
-        authorId: authorId,
-        content,
-        createdAt: new Date().toISOString()
-      };
-      setPosts([newPost, ...posts]);
+      alert(`게시글 저장 중 오류가 발생했습니다: ${error.message || '알 수 없는 오류'}`);
     }
   };
 
@@ -280,16 +319,9 @@ export default function App() {
           createdAt: data[0].created_at
         }]);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating comment:', error);
-      const newComment: FreeBoardComment = {
-        id: Math.random().toString(36).substring(2, 9),
-        postId,
-        authorId: authorId,
-        content,
-        createdAt: new Date().toISOString()
-      };
-      setComments([...comments, newComment]);
+      alert(`댓글 저장 중 오류가 발생했습니다: ${error.message || '알 수 없는 오류'}`);
     }
   };
 
@@ -321,15 +353,9 @@ export default function App() {
           createdAt: data[0].created_at
         }, ...marketingPosts]);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating marketing post:', error);
-      const newPost: MarketingPost = {
-        id: Math.random().toString(36).substring(2, 9),
-        authorId: authorId,
-        content,
-        createdAt: new Date().toISOString()
-      };
-      setMarketingPosts([newPost, ...marketingPosts]);
+      alert(`마케팅 실행 글 저장 중 오류가 발생했습니다: ${error.message || '알 수 없는 오류'}`);
     }
   };
 
@@ -406,17 +432,9 @@ export default function App() {
           createdAt: data[0].created_at
         }, ...memos]);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating memo:', error);
-      const newMemo: BuilderMemo = {
-        id: Math.random().toString(36).substring(2, 9),
-        authorId: authorId,
-        projectId: projectId,
-        content,
-        tags,
-        createdAt: new Date().toISOString()
-      };
-      setMemos([newMemo, ...memos]);
+      alert(`메모 저장 중 오류가 발생했습니다: ${error.message || '알 수 없는 오류'}`);
     }
   };
 
@@ -1419,7 +1437,7 @@ export default function App() {
                             <span className="text-[10px] font-bold text-slate-400">{new Date(fb.createdAt).toLocaleDateString()}</span>
                           </div>
                           <p className="text-sm font-medium text-slate-600 dark:text-slate-400 leading-relaxed">
-                            {fb.content}
+                            <LinkifyText text={fb.content} />
                           </p>
                         </div>
                       </div>
@@ -1451,9 +1469,10 @@ export default function App() {
           isOpen={isKnowhowViewModalOpen}
           onClose={() => setKnowhowViewModalOpen(false)}
           title={selectedKnowhow?.title || '지식 공유'}
+          maxWidth="4xl"
         >
           {selectedKnowhow && (
-            <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-2">
+            <div className="space-y-6 max-h-[80vh] overflow-y-auto pr-2">
               <div className="flex items-center gap-3">
                 <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm border border-blue-100">
                   {selectedKnowhow.category}
@@ -1466,7 +1485,7 @@ export default function App() {
               <div className="bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-6">
                 <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">요약</h4>
                 <p className="text-slate-700 dark:text-slate-300 font-bold leading-relaxed">
-                  {selectedKnowhow.summary}
+                  <LinkifyText text={selectedKnowhow.summary} />
                 </p>
               </div>
 

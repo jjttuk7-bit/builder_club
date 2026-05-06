@@ -33,6 +33,24 @@ import { motion, AnimatePresence } from 'motion/react';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 
+const LinkifyText = ({ text, className = 'text-blue-500 hover:underline' }: { text: string, className?: string }) => {
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts = text.split(urlRegex);
+  return (
+    <>
+      {parts.map((part, i) => 
+        urlRegex.test(part) ? (
+          <a key={i} href={part} target="_blank" rel="noopener noreferrer" className={className}>
+            {part}
+          </a>
+        ) : (
+          part
+        )
+      )}
+    </>
+  );
+};
+
 // --- Header ---
 interface HeaderProps {
   isDarkMode: boolean;
@@ -211,7 +229,7 @@ function ProjectCard({ project, onDelete, onEdit, onViewDetail, member }: Projec
         {project.title}
       </h3>
       <p className="text-sm text-slate-400 dark:text-slate-500 font-bold mb-6 line-clamp-2">
-        {project.description}
+        <LinkifyText text={project.description} />
       </p>
 
       <div className="space-y-4 mb-8 flex-1">
@@ -450,7 +468,7 @@ export const KnowhowSection = ({ knowhows, onDelete, members, onEdit, onView }: 
                     {kh.title}
                   </h3>
                   <p className="text-slate-400 dark:text-slate-500 text-sm font-bold leading-relaxed mb-4">
-                    {kh.summary}
+                    <LinkifyText text={kh.summary} />
                   </p>
                   <div className="flex items-center gap-6">
                     <div className="flex items-center gap-2">
@@ -901,7 +919,9 @@ export const BuilderLog = ({
                 </div>
               )}
 
-              <p className={`text-sm font-bold leading-relaxed mb-4 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>{memo.content}</p>
+              <p className={`text-sm font-bold leading-relaxed mb-4 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                <LinkifyText text={memo.content} />
+              </p>
               
               <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
                 {memo.tags.map(tag => (
@@ -1026,7 +1046,7 @@ export const Board = ({
                       </button>
                     </div>
                     <p className={`text-base font-bold leading-relaxed whitespace-pre-wrap ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                      {post.content}
+                      <LinkifyText text={post.content} />
                     </p>
                   </div>
                 </div>
@@ -1058,7 +1078,9 @@ export const Board = ({
                               </button>
                             </div>
                           </div>
-                          <p className={`text-sm font-bold leading-relaxed ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>{comment.content}</p>
+                          <p className={`text-sm font-bold leading-relaxed ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                            <LinkifyText text={comment.content} />
+                          </p>
                         </div>
                       </div>
                     );
