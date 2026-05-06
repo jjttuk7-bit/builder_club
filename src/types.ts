@@ -10,6 +10,12 @@ export interface Member {
   avatarUrl: string;
 }
 
+export interface Milestone {
+  week: number;
+  content: string;
+  status: '기획' | '진행중' | '완료';
+}
+
 export interface Project {
   id: string;
   ownerId: string;
@@ -25,6 +31,7 @@ export interface Project {
   helpRequest: string;
   actionType: 'demo' | 'link' | 'none';
   actionLabel: string;
+  milestones?: Milestone[];
 }
 
 export interface Knowhow {

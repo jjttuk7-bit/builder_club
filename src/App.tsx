@@ -73,7 +73,8 @@ export default function App() {
           blocker: p.blocker,
           helpRequest: p.help_request,
           actionType: p.action_type,
-          actionLabel: p.action_label
+          actionLabel: p.action_label,
+          milestones: p.milestones || []
         })));
 
         // Fetch Knowhows
@@ -128,6 +129,8 @@ export default function App() {
   // Modals state
   const [isMemberModalOpen, setMemberModalOpen] = useState(false);
   const [isProjectModalOpen, setProjectModalOpen] = useState(false);
+  const [isProjectDetailModalOpen, setProjectDetailModalOpen] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [isKnowhowModalOpen, setKnowhowModalOpen] = useState(false);
   const [isKnowhowViewModalOpen, setKnowhowViewModalOpen] = useState(false);
   const [selectedKnowhow, setSelectedKnowhow] = useState<Knowhow | null>(null);
@@ -148,7 +151,8 @@ export default function App() {
     blocker: '',
     helpRequest: '',
     actionType: 'demo',
-    actionLabel: '데모'
+    actionLabel: '데모',
+    milestones: []
   });
   const [newKnowhow, setNewKnowhow] = useState<Partial<Knowhow>>({
     authorId: '',
@@ -306,9 +310,15 @@ export default function App() {
     const owner = members.find(m => m.id === project.ownerId);
     setNewProject({
       ...project,
-      ownerId: owner ? owner.name : project.ownerId
+      ownerId: owner ? owner.name : project.ownerId,
+      milestones: project.milestones || []
     });
     setProjectModalOpen(true);
+  };
+
+  const handleViewProjectDetail = (project: Project) => {
+    setSelectedProject(project);
+    setProjectDetailModalOpen(true);
   };
 
   const handleAddProject = async (e: React.FormEvent) => {
@@ -361,7 +371,8 @@ export default function App() {
         blocker: updatedProject.blocker,
         help_request: updatedProject.helpRequest,
         action_type: updatedProject.actionType,
-        action_label: updatedProject.actionLabel
+        action_label: updatedProject.actionLabel,
+        milestones: updatedProject.milestones
       }).eq('id', updatedProject.id);
 
       if (!pError) {
@@ -389,7 +400,8 @@ export default function App() {
         blocker: project.blocker,
         help_request: project.helpRequest,
         action_type: project.actionType,
-        action_label: project.actionLabel
+        action_label: project.actionLabel,
+        milestones: project.milestones || []
       });
 
       if (!pError) {
@@ -411,7 +423,8 @@ export default function App() {
       blocker: '',
       helpRequest: '',
       actionType: 'demo',
-      actionLabel: '데모'
+      actionLabel: '데모',
+      milestones: []
     });
   };
 
@@ -558,6 +571,7 @@ export default function App() {
                 projects={projects} 
                 onDelete={handleDeleteProject} 
                 onEdit={handleEditProject}
+                onViewDetail={handleViewProjectDetail}
                 onAddProject={handleOpenAddProject}
                 members={members} 
                 viewMode="global" 
@@ -615,6 +629,7 @@ export default function App() {
               projects={projects} 
               onDelete={handleDeleteProject} 
               onEdit={handleEditProject}
+              onViewDetail={handleViewProjectDetail}
               onAddProject={handleOpenAddProject}
               members={members} 
               viewMode="member" 
@@ -801,6 +816,105 @@ export default function App() {
         {renderContent()}
 
         {/* Dynamic Modals */}
+        <Modal
+          isOpen={isProjectDetailModalOpen}
+          onClose={() => setProjectDetailModalOpen(false)}
+          title={selectedProject?.title || '프로젝트 상세 정보'}
+        >
+          {selectedProject && (
+            <div className="space-y-8 max-h-[80vh] overflow-y-auto pr-4 custom-scrollbar">
+              <div className="flex items-center gap-4">
+                <div className={`px-4 py-1.5 rounded-full text-[11px] font-black uppercase tracking-wider border ${
+                  selectedProject.status === '기획' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                  selectedProject.status === '제작중' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                  selectedProject.status === '완료' ? 'bg-slate-50 text-slate-600 border-slate-100' :
+                  'bg-purple-50 text-purple-600 border-purple-100'
+                }`}>
+                  {selectedProject.status}
+                </div>
+                <div className="text-xs font-black text-slate-400 uppercase tracking-widest">
+                  Progress: {selectedProject.progress}%
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-6">
+                  <div className="bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-8">
+                    <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">프로젝트 개요</h4>
+                    <p className={`text-sm font-bold leading-relaxed ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                      {selectedProject.description}
+                    </p>
+                  </div>
+
+                  <div className="bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/20 rounded-3xl p-8">
+                    <h4 className="text-xs font-black text-blue-400 uppercase tracking-widest mb-4">문제 정의</h4>
+                    <p className={`text-sm font-bold leading-relaxed italic ${isDarkMode ? 'text-blue-300' : 'text-blue-800'}`}>
+                      "{selectedProject.problemDefinition}"
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  <h4 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-tighter flex items-center gap-2">
+                    <LayoutDashboard className="w-5 h-5 text-blue-600" />
+                    주차별 개발 로드맵
+                  </h4>
+                  
+                  <div className="relative pl-8 space-y-8 before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-100 dark:before:bg-slate-800">
+                    {selectedProject.milestones && selectedProject.milestones.length > 0 ? (
+                      selectedProject.milestones.map((ms, idx) => (
+                        <div key={idx} className="relative">
+                          <div className={`absolute -left-10 w-6 h-6 rounded-full border-4 ${
+                            ms.status === '완료' ? 'bg-emerald-500 border-emerald-100' :
+                            ms.status === '진행중' ? 'bg-blue-500 border-blue-100' :
+                            'bg-slate-200 border-slate-50 dark:border-slate-800'
+                          } z-10`} />
+                          <div className={`p-6 rounded-[2rem] border ${
+                            ms.status === '준비중' ? 'bg-slate-50 dark:bg-slate-800/50 border-slate-100 dark:border-slate-800' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm'
+                          }`}>
+                            <div className="flex justify-between items-center mb-3">
+                              <span className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">Week {ms.week}</span>
+                              <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
+                                ms.status === '완료' ? 'bg-emerald-100 text-emerald-700' :
+                                ms.status === '진행중' ? 'bg-blue-100 text-blue-700' :
+                                'bg-slate-100 text-slate-600'
+                              }`}>
+                                {ms.status}
+                              </span>
+                            </div>
+                            <p className="text-sm font-bold text-slate-700 dark:text-slate-300 leading-relaxed">
+                              {ms.content}
+                            </p>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-slate-400 font-bold text-sm bg-slate-50 dark:bg-slate-900 border border-dashed border-slate-200 dark:border-slate-800 p-8 rounded-3xl">
+                        등록된 주차별 계획이 없습니다.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4 pt-8 border-t border-slate-100 dark:border-slate-800">
+                <img 
+                  src={members.find(m => m.id === selectedProject.ownerId)?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${selectedProject.ownerId}`} 
+                  alt="owner" 
+                  className="w-12 h-12 rounded-full border-2 border-white dark:border-slate-800"
+                  referrerPolicy="no-referrer"
+                />
+                <div>
+                  <div className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-tight">
+                    Created by {members.find(m => m.id === selectedProject.ownerId)?.name || selectedProject.ownerId}
+                  </div>
+                  <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Project Owner</div>
+                </div>
+              </div>
+            </div>
+          )}
+        </Modal>
+
         <Modal
           isOpen={isKnowhowViewModalOpen}
           onClose={() => setKnowhowViewModalOpen(false)}
@@ -1106,6 +1220,96 @@ export default function App() {
                   onChange={(e) => setNewProject({...newProject, progress: parseInt(e.target.value)})}
                   className={`w-full px-6 py-4 rounded-2xl border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white focus:ring-blue-900/40' : 'bg-white border-slate-200 focus:ring-blue-50'} outline-none focus:ring-4 font-bold transition-all`}
                 />
+              </div>
+
+              <div className="col-span-2 space-y-4">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-black text-slate-400 uppercase tracking-widest">주차별 개발 로드맵</label>
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      const currentMilestones = newProject.milestones || [];
+                      const nextWeek = currentMilestones.length > 0 
+                        ? Math.max(...currentMilestones.map(m => m.week)) + 1 
+                        : 1;
+                      setNewProject({
+                        ...newProject,
+                        milestones: [...currentMilestones, { week: nextWeek, content: '', status: '준비중' }] as any
+                      });
+                    }}
+                    className="flex items-center gap-1.5 text-[10px] font-black text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-all uppercase tracking-widest"
+                  >
+                    <Plus className="w-3 h-3" />
+                    주차 추가
+                  </button>
+                </div>
+                
+                <div className="max-h-96 overflow-y-auto pr-2 space-y-4 custom-scrollbar">
+                  {(newProject.milestones || []).map((ms, idx) => (
+                    <div key={idx} className="bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-6 space-y-4 relative">
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          const updated = (newProject.milestones || []).filter((_, i) => i !== idx);
+                          setNewProject({ ...newProject, milestones: updated });
+                        }}
+                        className="absolute top-4 right-4 text-slate-300 hover:text-rose-500 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                      
+                      <div className="grid grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">주차</label>
+                          <input 
+                            type="number" 
+                            value={ms.week}
+                            onChange={(e) => {
+                              const updated = [...(newProject.milestones || [])];
+                              updated[idx] = { ...updated[idx], week: parseInt(e.target.value) };
+                              setNewProject({ ...newProject, milestones: updated });
+                            }}
+                            className={`w-full px-4 py-2 text-sm rounded-xl border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200'} outline-none focus:ring-2 focus:ring-blue-500/20 font-bold transition-all`}
+                          />
+                        </div>
+                        <div className="col-span-2">
+                          <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">상태</label>
+                          <select 
+                            value={ms.status}
+                            onChange={(e) => {
+                              const updated = [...(newProject.milestones || [])];
+                              updated[idx] = { ...updated[idx], status: e.target.value as any };
+                              setNewProject({ ...newProject, milestones: updated });
+                            }}
+                            className={`w-full px-4 py-2 text-sm rounded-xl border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200'} outline-none focus:ring-2 focus:ring-blue-500/20 font-bold transition-all`}
+                          >
+                            <option value="준비중">준비중</option>
+                            <option value="진행중">진행중</option>
+                            <option value="완료">완료</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">개발 내용</label>
+                        <textarea 
+                          value={ms.content}
+                          onChange={(e) => {
+                            const updated = [...(newProject.milestones || [])];
+                            updated[idx] = { ...updated[idx], content: e.target.value };
+                            setNewProject({ ...newProject, milestones: updated });
+                          }}
+                          className={`w-full px-4 py-3 text-sm rounded-xl border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200'} outline-none focus:ring-2 focus:ring-blue-500/20 font-bold h-20 resize-none transition-all`}
+                          placeholder="해당 주차에 진행할 구체적인 개발 내용을 입력하세요"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                  {(newProject.milestones || []).length === 0 && (
+                    <div className="text-center py-8 border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl transition-colors">
+                      <p className="text-xs font-bold text-slate-400">주차별 개발 로드맵을 추가해 보세요.</p>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
             <button className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black shadow-xl shadow-blue-500/20 hover:bg-blue-700 transition-all text-lg">

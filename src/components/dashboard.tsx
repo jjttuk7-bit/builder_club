@@ -76,11 +76,12 @@ interface ProjectCardProps {
   project: Project;
   onDelete: (id: string) => void;
   onEdit?: (project: Project) => void;
+  onViewDetail?: (project: Project) => void;
   member?: Member;
   key?: string | number;
 }
 
-function ProjectCard({ project, onDelete, onEdit, member }: ProjectCardProps) {
+function ProjectCard({ project, onDelete, onEdit, onViewDetail, member }: ProjectCardProps) {
   const getStatusColor = (status: Project['status']) => {
     switch (status) {
       case '기획': return 'bg-amber-50 text-amber-600 border-amber-100';
@@ -93,7 +94,10 @@ function ProjectCard({ project, onDelete, onEdit, member }: ProjectCardProps) {
   };
 
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-8 shadow-sm hover:shadow-xl dark:hover:shadow-blue-900/20 transition-all group flex flex-col h-full relative">
+    <div 
+      onClick={() => onViewDetail?.(project)}
+      className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-8 shadow-sm hover:shadow-xl dark:hover:shadow-blue-900/20 transition-all group flex flex-col h-full relative cursor-pointer"
+    >
       <div className="flex justify-between items-start mb-6">
         <div className={`px-4 py-1.5 rounded-full text-[11px] font-black uppercase tracking-wider border ${getStatusColor(project.status)}`}>
           {project.status}
@@ -206,11 +210,12 @@ interface ProjectBoardProps {
   members: Member[];
   onDelete: (id: string) => void;
   onEdit?: (project: Project) => void;
+  onViewDetail?: (project: Project) => void;
   onAddProject?: (memberId: string) => void;
   viewMode?: 'global' | 'member';
 }
 
-export const ProjectBoard = ({ projects, onDelete, onEdit, members, onAddProject, viewMode = 'global' }: ProjectBoardProps) => {
+export const ProjectBoard = ({ projects, onDelete, onEdit, onViewDetail, members, onAddProject, viewMode = 'global' }: ProjectBoardProps) => {
   if (viewMode === 'member') {
     return (
       <section className="space-y-16">
@@ -262,6 +267,7 @@ export const ProjectBoard = ({ projects, onDelete, onEdit, members, onAddProject
                         project={project} 
                         onDelete={onDelete} 
                         onEdit={onEdit}
+                        onViewDetail={onViewDetail}
                         member={member} 
                       />
                     ))}
@@ -296,6 +302,7 @@ export const ProjectBoard = ({ projects, onDelete, onEdit, members, onAddProject
             project={project} 
             onDelete={onDelete} 
             onEdit={onEdit}
+            onViewDetail={onViewDetail}
             member={members.find(m => m.id === project.ownerId)} 
           />
         ))}
