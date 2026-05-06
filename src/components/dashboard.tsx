@@ -1017,54 +1017,57 @@ export const Scratchpad = ({
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className={`mx-4 p-12 rounded-[2px] shadow-2xl border-l-[12px] border-l-amber-400 relative transition-colors ${
+            className={`mx-4 p-16 rounded-[2px] shadow-2xl border-l-[16px] border-l-amber-400 relative transition-colors ${
               isDarkMode ? 'bg-slate-800' : 'bg-white'
             }`}
             style={{ 
-              minHeight: '500px', 
+              minHeight: '850px', 
               boxShadow: '0 25px 50px -12px rgba(0,0,0,0.1), inset 0 0 100px rgba(0,0,0,0.02)',
               backgroundImage: 'linear-gradient(#f0f0f0 1.1px, transparent 1.1px)',
-              backgroundSize: '100% 1.8rem',
-              lineHeight: '1.8rem'
+              backgroundSize: '100% 2rem',
+              lineHeight: '2rem'
             }}
           >
-            <div className="flex flex-col h-full gap-8">
-              <div className="flex items-center justify-between border-b-2 border-slate-100 dark:border-slate-700 pb-4">
-                <div className="flex items-center gap-4">
-                  <span className="text-[10px] font-black text-amber-500 uppercase tracking-[0.2em]">MEMO BY</span>
-                  <select 
-                    value={selectedAuthorId}
-                    onChange={(e) => setSelectedAuthorId(e.target.value)}
-                    className={`text-sm font-black bg-transparent border-none focus:ring-0 p-0 ${isDarkMode ? 'text-slate-300' : 'text-slate-900'}`}
-                  >
-                    <option value="">작성자 선택</option>
-                    {members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-                  </select>
+            <div className="flex flex-col h-full gap-10">
+              <div className="flex items-center justify-between border-b-2 border-slate-100 dark:border-slate-700 pb-6">
+                <div className="flex items-center gap-6">
+                  <span className="text-[10px] font-black text-amber-500 uppercase tracking-[0.3em]">NEW PAGE</span>
+                  <div className="flex items-center gap-4">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">WRITER:</span>
+                    <select 
+                      value={selectedAuthorId}
+                      onChange={(e) => setSelectedAuthorId(e.target.value)}
+                      className={`text-sm font-black bg-transparent border-none focus:ring-0 p-0 ${isDarkMode ? 'text-slate-300' : 'text-slate-900'}`}
+                    >
+                      <option value="">작성자 선택</option>
+                      {members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                    </select>
+                  </div>
                 </div>
-                <button onClick={() => setIsAdding(false)} className="text-slate-300 hover:text-rose-500 transition-colors"><X className="w-6 h-6" /></button>
+                <button onClick={() => setIsAdding(false)} className="text-slate-300 hover:text-rose-500 transition-colors p-2"><X className="w-8 h-8" /></button>
               </div>
               
               <textarea 
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                placeholder="여기에 자유롭게 적어보세요... (링크를 넣으면 클릭할 수 있게 바뀝니다)"
-                className={`flex-1 w-full bg-transparent border-none focus:ring-0 resize-none text-lg font-bold leading-[1.8rem] p-0 italic ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}
+                placeholder="여기에 자유롭게 적어보세요... 떠오르는 모든 생각을 두서없이 적어도 좋습니다. (URL은 자동으로 링크로 변환됩니다)"
+                className={`flex-1 w-full bg-transparent border-none focus:ring-0 resize-none text-xl font-bold leading-[2rem] p-0 italic ${isDarkMode ? 'text-slate-200' : 'text-slate-700'}`}
                 autoFocus
               />
 
-              <div className="flex justify-end gap-4 pt-6">
+              <div className="flex justify-end gap-6 pt-10 border-t border-slate-50 dark:border-slate-700">
                 <button 
                   onClick={() => setIsAdding(false)}
-                  className="px-6 py-3 text-xs font-black text-slate-400 hover:text-slate-600 uppercase tracking-widest"
+                  className="px-8 py-3 text-xs font-black text-slate-400 hover:text-slate-600 uppercase tracking-widest transition-colors"
                 >
-                  취소하기
+                  작성 취소
                 </button>
                 <button 
                   onClick={handleSubmit}
                   disabled={!content.trim() || !selectedAuthorId}
-                  className="bg-slate-900 dark:bg-amber-500 text-white px-10 py-3.5 rounded-xl font-black text-sm disabled:opacity-30 shadow-lg"
+                  className="bg-amber-500 hover:bg-amber-600 dark:bg-amber-500 text-white px-12 py-4 rounded-xl font-black text-sm disabled:opacity-30 shadow-xl shadow-amber-500/10 transition-all active:scale-95"
                 >
-                  {editingId ? '메모 수정하기' : '종이에 남기기'}
+                  {editingId ? '메모 수정 완료' : '종이에 기록하기'}
                 </button>
               </div>
             </div>
