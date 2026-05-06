@@ -62,3 +62,10 @@ export interface Meeting {
   }[];
   commonQuestions: string[];
 }
+
+export interface FreeBoardPost {
+  id: string;
+  authorId: string;
+  content: string;
+  createdAt: string;
+}

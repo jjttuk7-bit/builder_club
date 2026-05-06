@@ -19,7 +19,8 @@ import {
   Monitor,
   Moon,
   Sun,
-  Activity
+  Activity,
+  MessageSquare
 } from 'lucide-react';
 import React from 'react';
 import { Project, Knowhow, Member, Meeting } from '../types';
@@ -612,5 +613,99 @@ export const MeetingBoard = ({
         </div>
       </div>
     </div>
+  );
+};
+
+// --- Free Board ---
+interface FreeBoardProps {
+  posts: any[];
+  members: Member[];
+  onDelete: (id: string) => void;
+  onCreate: (content: string) => void;
+  isDarkMode: boolean;
+}
+
+export const FreeBoard = ({ posts, members, onDelete, onCreate, isDarkMode }: FreeBoardProps) => {
+  const [content, setContent] = React.useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!content.trim()) return;
+    onCreate(content);
+    setContent('');
+  };
+
+  return (
+    <section className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="flex items-center gap-3 mb-8">
+        <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/20">
+          <MessageSquare className="w-6 h-6 text-white" />
+        </div>
+        <div>
+          <h2 className={`text-3xl font-black ${isDarkMode ? 'text-white' : 'text-slate-800'} tracking-tighter transition-colors uppercase`}>자유 게시판</h2>
+          <p className="text-slate-400 font-bold text-sm">빌더들의 자유로운 생각과 이야기를 나누어주세요.</p>
+        </div>
+      </div>
+
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[3rem] p-8 shadow-sm mb-12 transition-colors">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder="어떤 이야기를 나누고 싶으신가요? (마크다운 지원)"
+            className={`w-full min-h-[150px] p-8 rounded-[2rem] border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-600' : 'bg-slate-50 border-slate-100 text-slate-800 placeholder:text-slate-300'} outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all font-bold text-lg leading-relaxed`}
+          />
+          <div className="flex justify-end">
+            <button 
+              type="submit"
+              className="bg-blue-600 text-white px-10 py-4 rounded-2xl font-black shadow-xl shadow-blue-500/20 hover:bg-blue-700 transition-all active:scale-95 text-lg"
+            >
+              이야기 등록하기
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <div className="space-y-6">
+        {posts.map(post => {
+          const author = members.find(m => m.id === post.authorId);
+          return (
+            <div key={post.id} className={`p-8 rounded-[2.5rem] border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'} shadow-sm transition-all group`}>
+              <div className="flex items-start gap-6">
+                <img 
+                  src={author?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${post.authorId}`} 
+                  alt="author" 
+                  className="w-14 h-14 rounded-full bg-slate-100 shadow-sm ring-4 ring-white dark:ring-slate-800"
+                  referrerPolicy="no-referrer"
+                />
+                <div className="flex-1">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <div className={`font-black ${isDarkMode ? 'text-slate-100' : 'text-slate-800'} text-lg tracking-tight`}>{author?.name || '익명 빌더'}</div>
+                      <div className="text-xs text-slate-400 font-bold uppercase tracking-widest">{new Date(post.createdAt).toLocaleString()}</div>
+                    </div>
+                    <button 
+                      onClick={() => onDelete(post.id)}
+                      className="p-3 text-slate-300 hover:text-rose-500 transition-all hover:bg-rose-50 rounded-2xl"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                  </div>
+                  <p className={`text-lg font-bold leading-relaxed whitespace-pre-wrap ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                    {post.content}
+                  </p>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+        {posts.length === 0 && (
+          <div className={`py-40 text-center border-2 border-dashed ${isDarkMode ? 'border-slate-800' : 'border-slate-100'} rounded-[3rem]`}>
+            <MessageSquare className="w-16 h-16 text-slate-200 dark:text-slate-800 mx-auto mb-6" />
+            <p className="text-slate-400 font-bold text-lg">아직 등록된 이야기가 없습니다.<br/>첫 번째 이야기를 들려주세요!</p>
+          </div>
+        )}
+      </div>
+    </section>
   );
 };

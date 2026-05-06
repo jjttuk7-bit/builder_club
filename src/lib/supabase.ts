@@ -21,14 +21,7 @@ const getCleanUrl = (url: string | undefined) => {
   }
 };
 
-const supabaseUrl = getCleanUrl(rawUrl);
-const supabaseAnonKey = rawKey?.trim() || '';
+const supabaseUrl = getCleanUrl(rawUrl) || 'https://placeholder.supabase.co';
+const supabaseAnonKey = rawKey?.trim() || 'placeholder';
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('Supabase URL or Anon Key is missing. Please check your .env file.');
-}
-
-export const supabase = createClient(
-  supabaseUrl || '',
-  supabaseAnonKey || ''
-);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);

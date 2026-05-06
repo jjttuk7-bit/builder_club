@@ -24,7 +24,8 @@ import {
   ProjectBoard, 
   KnowhowSection, 
   MeetingBoard,
-  ActivityFeed
+  ActivityFeed,
+  FreeBoard
 } from './components/dashboard';
 import { Modal } from './components/ui/modal';
 import { supabase } from './lib/supabase';
@@ -32,7 +33,7 @@ import { projects as initialProjects } from './data/projects';
 import { knowhows as initialKnowhows } from './data/knowhows';
 import { members as initialMembers } from './data/members';
 import { meeting as initialMeeting } from './data/meeting';
-import { Project, Knowhow, Member, Meeting, ProjectFeedback } from './types';
+import { Project, Knowhow, Member, Meeting, ProjectFeedback, FreeBoardPost } from './types';
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
@@ -46,11 +47,12 @@ export default function App() {
   const [loginError, setLoginError] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
 
-  const [activeTab, setActiveTab] = useState('종합 대시보드');
+  const [activeTab, setActiveTab] = useState('성장 가속 엔진');
   const [projects, setProjects] = useState<Project[]>(initialProjects);
   const [knowhows, setKnowhows] = useState<Knowhow[]>(initialKnowhows);
   const [members, setMembers] = useState<Member[]>(initialMembers);
   const [meeting, setMeeting] = useState<Meeting>(initialMeeting);
+  const [posts, setPosts] = useState<FreeBoardPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Supabase Data Fetching
@@ -100,6 +102,15 @@ export default function App() {
           content: k.content
         })));
 
+        // Fetch Posts
+        const { data: psData } = await supabase.from('posts').select('*').order('created_at', { ascending: false });
+        if (psData) setPosts(psData.map(p => ({
+          id: p.id,
+          authorId: p.author_id,
+          content: p.content,
+          createdAt: p.created_at
+        })));
+
         // Fetch Meeting Info
         const { data: mtData } = await supabase.from('meeting_info').select('*').single();
         if (mtData) setMeeting({
@@ -141,7 +152,48 @@ export default function App() {
       setIsAuthenticated(false);
       setPassword('');
       sessionStorage.removeItem('isClubAuthenticated');
-      setActiveTab('종합 대시보드');
+      setActiveTab('성장 가속 엔진');
+    }
+  };
+
+  const handleCreatePost = async (content: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('posts')
+        .insert([{ content, author_id: 'anonymous', created_at: new Date().toISOString() }])
+        .select();
+      
+      if (error) throw error;
+      if (data) {
+        setPosts([{
+          id: data[0].id,
+          authorId: data[0].author_id,
+          content: data[0].content,
+          createdAt: data[0].created_at
+        }, ...posts]);
+      }
+    } catch (error) {
+      console.error('Error creating post:', error);
+      // Fallback for demo
+      const newPost: FreeBoardPost = {
+        id: Math.random().toString(36).substring(2, 9),
+        authorId: 'anonymous',
+        content,
+        createdAt: new Date().toISOString()
+      };
+      setPosts([newPost, ...posts]);
+    }
+  };
+
+  const handleDeletePost = async (id: string) => {
+    if (!window.confirm('이 글을 삭제하시겠습니까?')) return;
+    try {
+      const { error } = await supabase.from('posts').delete().eq('id', id);
+      if (error) throw error;
+      setPosts(posts.filter(p => p.id !== id));
+    } catch (error) {
+      console.error('Error deleting post:', error);
+      setPosts(posts.filter(p => p.id !== id));
     }
   };
 
@@ -608,16 +660,17 @@ export default function App() {
   };
 
   const navItems = [
-    { name: '종합 대시보드', icon: LayoutDashboard },
+    { name: '성장 가속 엔진', icon: LayoutDashboard },
     { name: '멤버별 스페이스', icon: UserIcon },
     { name: '지식 공유', icon: Tag },
     { name: '빌더 모임', icon: Briefcase },
+    { name: '자유 게시판', icon: MessageSquare },
     { name: '멤버 관리', icon: Users },
   ];
 
   const renderContent = () => {
     switch (activeTab) {
-      case '종합 대시보드':
+      case '성장 가속 엔진':
         return (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-12">
             <ActivityFeed projects={projects} knowhows={knowhows} members={members} />
@@ -628,8 +681,8 @@ export default function App() {
                   <LayoutDashboard className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h2 className="text-3xl font-black text-slate-800 dark:text-white tracking-tighter uppercase">Global Dashboard</h2>
-                  <p className="text-slate-400 font-bold text-sm">빌더 클럽의 실시간 프로젝트 현황입니다.</p>
+                  <h2 className="text-3xl font-black text-slate-800 dark:text-white tracking-tighter uppercase">GROWTH ENGINE BOARD</h2>
+                  <p className="text-slate-400 font-bold text-sm">빌더 클럽의 성장을 가속하는 에너지가 모이는 곳입니다.</p>
                 </div>
               </div>
             </div>
@@ -746,6 +799,16 @@ export default function App() {
               onDeleteQuestion={handleDeleteQuestion}
             />
           </div>
+        );
+      case '자유 게시판':
+        return (
+          <FreeBoard 
+            posts={posts} 
+            members={members} 
+            onDelete={handleDeletePost} 
+            onCreate={handleCreatePost}
+            isDarkMode={isDarkMode}
+          />
         );
       case '멤버 관리':
         return (
