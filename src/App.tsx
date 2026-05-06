@@ -14,7 +14,12 @@ import {
   Tag,
   Briefcase,
   Activity,
-  MessageSquare
+  MessageSquare,
+  Rocket,
+  Search,
+  BookOpen,
+  Calendar,
+  Settings
 } from 'lucide-react';
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
@@ -25,7 +30,7 @@ import {
   KnowhowSection, 
   MeetingBoard,
   ActivityFeed,
-  FreeBoard
+  Board
 } from './components/dashboard';
 import { Modal } from './components/ui/modal';
 import { supabase } from './lib/supabase';
@@ -33,7 +38,17 @@ import { projects as initialProjects } from './data/projects';
 import { knowhows as initialKnowhows } from './data/knowhows';
 import { members as initialMembers } from './data/members';
 import { meeting as initialMeeting } from './data/meeting';
-import { Project, Knowhow, Member, Meeting, ProjectFeedback, FreeBoardPost, FreeBoardComment } from './types';
+import { 
+  Project, 
+  Knowhow, 
+  Member, 
+  Meeting, 
+  ProjectFeedback, 
+  FreeBoardPost, 
+  FreeBoardComment,
+  MarketingPost,
+  MarketingComment
+} from './types';
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
@@ -54,6 +69,8 @@ export default function App() {
   const [meeting, setMeeting] = useState<Meeting>(initialMeeting);
   const [posts, setPosts] = useState<FreeBoardPost[]>([]);
   const [comments, setComments] = useState<FreeBoardComment[]>([]);
+  const [marketingPosts, setMarketingPosts] = useState<MarketingPost[]>([]);
+  const [marketingComments, setMarketingComments] = useState<MarketingComment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Supabase Data Fetching
@@ -130,6 +147,24 @@ export default function App() {
           schedule: mtData.schedule,
           commonQuestions: mtData.common_questions
         });
+
+        // Fetch Marketing Data
+        const { data: mpsData } = await supabase.from('marketing_posts').select('*').order('created_at', { ascending: false });
+        if (mpsData) setMarketingPosts(mpsData.map(p => ({
+          id: p.id,
+          authorId: p.author_id,
+          content: p.content,
+          createdAt: p.created_at
+        })));
+
+        const { data: mcmData } = await supabase.from('marketing_comments').select('*').order('created_at', { ascending: true });
+        if (mcmData) setMarketingComments(mcmData.map(c => ({
+          id: c.id,
+          postId: c.post_id,
+          authorId: c.author_id,
+          content: c.content,
+          createdAt: c.created_at
+        })));
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {
@@ -248,6 +283,89 @@ export default function App() {
     } catch (error) {
       console.error('Error deleting comment:', error);
       setComments(comments.filter(c => c.id !== id));
+    }
+  };
+
+  const handleCreateMarketingPost = async (content: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('marketing_posts')
+        .insert([{ content, author_id: 'anonymous', created_at: new Date().toISOString() }])
+        .select();
+      
+      if (error) throw error;
+      if (data) {
+        setMarketingPosts([{
+          id: data[0].id,
+          authorId: data[0].author_id,
+          content: data[0].content,
+          createdAt: data[0].created_at
+        }, ...marketingPosts]);
+      }
+    } catch (error) {
+      console.error('Error creating marketing post:', error);
+      const newPost: MarketingPost = {
+        id: Math.random().toString(36).substring(2, 9),
+        authorId: 'anonymous',
+        content,
+        createdAt: new Date().toISOString()
+      };
+      setMarketingPosts([newPost, ...marketingPosts]);
+    }
+  };
+
+  const handleDeleteMarketingPost = async (id: string) => {
+    if (!window.confirm('이 항목을 삭제하시겠습니까?')) return;
+    try {
+      const { error } = await supabase.from('marketing_posts').delete().eq('id', id);
+      if (error) throw error;
+      setMarketingPosts(marketingPosts.filter(p => p.id !== id));
+      setMarketingComments(marketingComments.filter(c => c.postId !== id));
+    } catch (error) {
+      console.error('Error deleting marketing post:', error);
+      setMarketingPosts(marketingPosts.filter(p => p.id !== id));
+    }
+  };
+
+  const handleCreateMarketingComment = async (postId: string, content: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('marketing_comments')
+        .insert([{ post_id: postId, content, author_id: 'anonymous', created_at: new Date().toISOString() }])
+        .select();
+      
+      if (error) throw error;
+      if (data) {
+        setMarketingComments([...marketingComments, {
+          id: data[0].id,
+          postId: data[0].post_id,
+          authorId: data[0].author_id,
+          content: data[0].content,
+          createdAt: data[0].created_at
+        }]);
+      }
+    } catch (error) {
+      console.error('Error creating marketing comment:', error);
+      const newComment: MarketingComment = {
+        id: Math.random().toString(36).substring(2, 9),
+        postId,
+        authorId: 'anonymous',
+        content,
+        createdAt: new Date().toISOString()
+      };
+      setMarketingComments([...marketingComments, newComment]);
+    }
+  };
+
+  const handleDeleteMarketingComment = async (id: string) => {
+    if (!window.confirm('댓글을 삭제하시겠습니까?')) return;
+    try {
+      const { error } = await supabase.from('marketing_comments').delete().eq('id', id);
+      if (error) throw error;
+      setMarketingComments(marketingComments.filter(c => c.id !== id));
+    } catch (error) {
+      console.error('Error deleting marketing comment:', error);
+      setMarketingComments(marketingComments.filter(c => c.id !== id));
     }
   };
 
@@ -748,13 +866,29 @@ export default function App() {
     setProjectModalOpen(true);
   };
 
-  const navItems = [
-    { name: '성장 가속 엔진', icon: LayoutDashboard },
-    { name: '멤버별 스페이스', icon: UserIcon },
-    { name: '지식 공유', icon: Tag },
-    { name: '빌더 모임', icon: Briefcase },
-    { name: '자유 게시판', icon: MessageSquare },
-    { name: '멤버 관리', icon: Users },
+  const sidebarGroups = [
+    {
+      title: 'MAIN',
+      items: [
+        { name: '성장 가속 엔진', icon: LayoutDashboard },
+      ]
+    },
+    {
+      title: 'WORKSPACE',
+      items: [
+        { name: '프로젝트 현황', icon: Briefcase },
+        { name: '마케팅 실행', icon: Rocket },
+        { name: '지식 공유', icon: Tag },
+      ]
+    },
+    {
+      title: 'COMMUNITY',
+      items: [
+        { name: '빌더 모임', icon: Calendar },
+        { name: '자유 게시판', icon: MessageSquare },
+        { name: '멤버 관리', icon: Users },
+      ]
+    }
   ];
 
   const renderContent = () => {
@@ -790,7 +924,7 @@ export default function App() {
                 <LayoutDashboard className="w-12 h-12 text-slate-200 dark:text-slate-700 mx-auto mb-4" />
                 <p className="text-slate-400 font-bold">등록된 프로젝트가 없습니다.</p>
                 <button 
-                  onClick={() => setActiveTab('멤버별 스페이스')}
+                  onClick={() => setActiveTab('프로젝트 현황')}
                   className="mt-4 text-blue-600 dark:text-blue-400 font-black hover:underline"
                 >
                   프로젝트 추가하러 가기
@@ -821,7 +955,7 @@ export default function App() {
             </div>
           </motion.div>
         );
-      case '멤버별 스페이스':
+      case '프로젝트 현황':
         return (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="flex justify-between items-center mb-8">
@@ -844,6 +978,23 @@ export default function App() {
               viewMode="member" 
             />
           </div>
+        );
+      case '마케팅 실행':
+        return (
+          <Board 
+            title="마케팅 실행 공유" 
+            description="실제 진행 중인 마케팅 실행 내용과 결과를 공유하고 인사이트를 나누세요." 
+            icon={Rocket}
+            placeholder="마케팅 캠페인, 광고 집행 결과, 성과 측정 등을 공유해 주세요."
+            posts={marketingPosts} 
+            comments={marketingComments}
+            members={members} 
+            onDelete={handleDeleteMarketingPost} 
+            onCreate={handleCreateMarketingPost}
+            onDeleteComment={handleDeleteMarketingComment}
+            onCreateComment={handleCreateMarketingComment}
+            isDarkMode={isDarkMode}
+          />
         );
       case '지식 공유':
         return (
@@ -891,7 +1042,11 @@ export default function App() {
         );
       case '자유 게시판':
         return (
-          <FreeBoard 
+          <Board 
+            title="자유 게시판" 
+            description="빌더들의 자유로운 생각과 이야기를 나누어주세요." 
+            icon={MessageSquare}
+            placeholder="어떤 이야기를 나누고 싶으신가요?"
             posts={posts} 
             comments={comments}
             members={members} 
@@ -1018,26 +1173,35 @@ export default function App() {
           <span className={`text-2xl font-black tracking-tighter ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>BUILDERS<br/><span className="text-blue-600">CLUB</span></span>
         </div>
 
-        <nav className="flex-1 px-6 space-y-3">
-          {navItems.map((item) => (
-            <button
-              key={item.name}
-              onClick={() => setActiveTab(item.name)}
-              className={`w-full px-6 py-5 flex items-center gap-4 transition-all duration-300 rounded-[1.5rem] group relative ${
-                activeTab === item.name 
-                  ? (isDarkMode ? 'text-blue-400 bg-blue-900/40 ring-1 ring-blue-800' : 'text-blue-600 bg-blue-50/80 shadow-sm ring-1 ring-blue-100')
-                  : (isDarkMode ? 'text-slate-500 hover:text-slate-200 hover:bg-slate-800' : 'text-slate-400 hover:text-slate-700 hover:bg-slate-50')
-              }`}
-            >
-              <item.icon className={`w-5 h-5 ${activeTab === item.name ? (isDarkMode ? 'text-blue-400' : 'text-blue-600') : (isDarkMode ? 'group-hover:text-slate-300' : 'group-hover:text-slate-600')}`} />
-              <span className="font-black text-sm tracking-tight">{item.name}</span>
-              {activeTab === item.name && (
-                <motion.div 
-                  layoutId="active-indicator"
-                  className={`absolute right-4 w-1.5 h-1.5 rounded-full ${isDarkMode ? 'bg-blue-400' : 'bg-blue-600'}`} 
-                />
-              )}
-            </button>
+        <nav className="flex-1 px-4 space-y-8 overflow-y-auto custom-scrollbar pb-8">
+          {sidebarGroups.map((group) => (
+            <div key={group.title} className="space-y-2">
+              <h3 className="px-6 text-[10px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.2em] mb-4">
+                {group.title}
+              </h3>
+              <div className="space-y-1">
+                {group.items.map((item) => (
+                  <button
+                    key={item.name}
+                    onClick={() => setActiveTab(item.name)}
+                    className={`w-full px-6 py-3.5 flex items-center gap-4 transition-all duration-300 rounded-2xl group relative ${
+                      activeTab === item.name 
+                        ? (isDarkMode ? 'text-blue-400 bg-blue-900/30 ring-1 ring-blue-800' : 'text-blue-600 bg-blue-50/80 shadow-sm ring-1 ring-blue-100')
+                        : (isDarkMode ? 'text-slate-500 hover:text-slate-200 hover:bg-slate-800/50' : 'text-slate-400 hover:text-slate-700 hover:bg-slate-50')
+                    }`}
+                  >
+                    <item.icon className={`w-5 h-5 ${activeTab === item.name ? (isDarkMode ? 'text-blue-400' : 'text-blue-600') : (isDarkMode ? 'group-hover:text-slate-300' : 'group-hover:text-slate-600')}`} />
+                    <span className="font-black text-sm tracking-tight">{item.name}</span>
+                    {activeTab === item.name && (
+                      <motion.div 
+                        layoutId="active-indicator"
+                        className={`absolute right-4 w-1.5 h-1.5 rounded-full ${isDarkMode ? 'bg-blue-400' : 'bg-blue-600'}`} 
+                      />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
           ))}
         </nav>
 

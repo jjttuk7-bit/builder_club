@@ -617,7 +617,11 @@ export const MeetingBoard = ({
 };
 
 // --- Free Board ---
-interface FreeBoardProps {
+interface BoardProps {
+  title: string;
+  description: string;
+  icon: any;
+  placeholder?: string;
   posts: any[];
   comments: any[];
   members: Member[];
@@ -628,7 +632,11 @@ interface FreeBoardProps {
   isDarkMode: boolean;
 }
 
-export const FreeBoard = ({ 
+export const Board = ({ 
+  title,
+  description,
+  icon: Icon,
+  placeholder = "어떤 이야기를 나누고 싶으신가요?",
   posts, 
   comments, 
   members, 
@@ -637,7 +645,7 @@ export const FreeBoard = ({
   onDeleteComment, 
   onCreateComment, 
   isDarkMode 
-}: FreeBoardProps) => {
+}: BoardProps) => {
   const [content, setContent] = React.useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -651,11 +659,11 @@ export const FreeBoard = ({
     <section className="animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-4xl mx-auto">
       <div className="flex items-center gap-3 mb-8 px-4">
         <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/20">
-          <MessageSquare className="w-6 h-6 text-white" />
+          <Icon className="w-6 h-6 text-white" />
         </div>
         <div>
-          <h2 className={`text-2xl font-black ${isDarkMode ? 'text-white' : 'text-slate-800'} tracking-tighter transition-colors uppercase`}>자유 게시판</h2>
-          <p className="text-slate-400 font-bold text-xs">빌더들의 자유로운 생각과 이야기를 나누어주세요.</p>
+          <h2 className={`text-2xl font-black ${isDarkMode ? 'text-white' : 'text-slate-800'} tracking-tighter transition-colors uppercase`}>{title}</h2>
+          <p className="text-slate-400 font-bold text-xs">{description}</p>
         </div>
       </div>
 
@@ -664,7 +672,7 @@ export const FreeBoard = ({
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder="어떤 이야기를 나누고 싶으신가요?"
+            placeholder={placeholder}
             className={`flex-1 min-h-[80px] p-4 rounded-2xl border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-600' : 'bg-slate-50 border-slate-100 text-slate-800 placeholder:text-slate-300'} outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all font-bold text-base resize-none`}
           />
           <button 

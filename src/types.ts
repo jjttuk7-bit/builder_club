@@ -77,3 +77,18 @@ export interface FreeBoardComment {
   content: string;
   createdAt: string;
 }
+
+export interface MarketingPost {
+  id: string;
+  authorId: string;
+  content: string;
+  createdAt: string;
+}
+
+export interface MarketingComment {
+  id: string;
+  postId: string;
+  authorId: string;
+  content: string;
+  createdAt: string;
+}
