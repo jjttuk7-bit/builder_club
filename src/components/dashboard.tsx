@@ -23,11 +23,14 @@ import {
   MessageSquare,
   BookMarked,
   Hash,
-  Briefcase
+  Briefcase,
+  Download,
+  FileText
 } from 'lucide-react';
 import React from 'react';
 import { Project, Knowhow, Member, Meeting, BuilderMemo } from '../types';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
+import { jsPDF } from 'jspdf';
 
 // --- Header ---
 interface HeaderProps {
@@ -463,7 +466,82 @@ export const KnowhowSection = ({ knowhows, onDelete, members, onEdit, onView }: 
                     ))}
                   </div>
                 </div>
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-2 relative">
+                  <div className="flex items-center gap-1 group/downloads">
+                    <button 
+                      type="button"
+                      className="p-2 text-slate-300 dark:text-slate-600 hover:text-blue-600 transition-colors"
+                      title="다운로드"
+                    >
+                      <Download className="w-5 h-5" />
+                    </button>
+                    <div className="absolute right-full mr-2 hidden group-hover/downloads:flex flex-col bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl shadow-xl z-50 overflow-hidden w-24">
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const authorName = members.find(m => m.id === kh.authorId)?.name || kh.authorId;
+                          const content = `# ${kh.title}\n\nCategory: ${kh.category}\nAuthor: ${authorName}\nDate: ${new Date().toLocaleDateString()}\n\n## Summary\n${kh.summary}\n\n## Content\n${kh.content || kh.summary}\n\nTags: ${kh.tags?.join(', ')}`;
+                          const blob = new Blob([content], { type: 'text/markdown' });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `${kh.title}.md`;
+                          a.click();
+                          URL.revokeObjectURL(url);
+                        }}
+                        className="px-3 py-2 text-[10px] font-black text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 text-left transition-colors uppercase tracking-widest"
+                      >
+                        MD
+                      </button>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const authorName = members.find(m => m.id === kh.authorId)?.name || kh.authorId;
+                          const html = `
+                            <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+                            <head><meta charset='utf-8'><title>${kh.title}</title></head>
+                            <body>
+                              <h1>${kh.title}</h1>
+                              <p><b>카테고리:</b> ${kh.category}</p>
+                              <p><b>작성자:</b> ${authorName}</p>
+                              <p><b>요약:</b> ${kh.summary}</p>
+                              <hr/>
+                              <div>${kh.content || kh.summary}</div>
+                              <p><i>태그: ${kh.tags?.join(', ')}</i></p>
+                            </body>
+                            </html>
+                          `;
+                          const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `${kh.title}.doc`;
+                          a.click();
+                          URL.revokeObjectURL(url);
+                        }}
+                        className="px-3 py-2 text-[10px] font-black text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 border-y border-slate-50 dark:border-slate-800 text-left transition-colors uppercase tracking-widest"
+                      >
+                        DOCX
+                      </button>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const authorName = members.find(m => m.id === kh.authorId)?.name || kh.authorId;
+                          const doc = new jsPDF();
+                          // Note: Standard PDF fonts don't support Korean. For full support, a custom font is needed.
+                          // This provides a basic English fallback or simple structure.
+                          doc.text(`Title: ${kh.title}`, 10, 10);
+                          doc.text(`Author: ${authorName}`, 10, 20);
+                          doc.text(`Category: ${kh.category}`, 10, 30);
+                          doc.text(`Summary: ${kh.summary}`, 10, 40, { maxWidth: 180 });
+                          doc.save(`${kh.title}.pdf`);
+                        }}
+                        className="px-3 py-2 text-[10px] font-black text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 text-left transition-colors uppercase tracking-widest"
+                      >
+                        PDF
+                      </button>
+                    </div>
+                  </div>
                   <button 
                     onClick={(e) => {
                       e.stopPropagation();

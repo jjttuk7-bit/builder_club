@@ -20,11 +20,14 @@ import {
   BookOpen,
   Calendar,
   Settings,
-  BookMarked
+  BookMarked,
+  Download,
+  FileText
 } from 'lucide-react';
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { motion } from 'motion/react';
+import { jsPDF } from 'jspdf';
 import { 
   Header,
   ProjectBoard, 
@@ -1479,17 +1482,83 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 pt-6 border-t border-slate-100 dark:border-slate-800">
-                <img 
-                  src={members.find(m => m.id === selectedKnowhow.authorId)?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${selectedKnowhow.authorId}`} 
-                  alt="author" 
-                  className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800"
-                  referrerPolicy="no-referrer"
-                />
-                <span className="text-sm font-black text-slate-800 dark:text-slate-200">
-                  {members.find(m => m.id === selectedKnowhow.authorId)?.name || selectedKnowhow.authorId}
-                </span>
-              </div>
+                <div className="flex items-center justify-between pt-6 border-t border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center gap-3">
+                    <img 
+                      src={members.find(m => m.id === selectedKnowhow.authorId)?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${selectedKnowhow.authorId}`} 
+                      alt="author" 
+                      className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800"
+                      referrerPolicy="no-referrer"
+                    />
+                    <span className="text-sm font-black text-slate-800 dark:text-slate-200">
+                      {members.find(m => m.id === selectedKnowhow.authorId)?.name || selectedKnowhow.authorId}
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={() => {
+                        const authorName = members.find(m => m.id === selectedKnowhow.authorId)?.name || selectedKnowhow.authorId;
+                        const content = `# ${selectedKnowhow.title}\n\nCategory: ${selectedKnowhow.category}\nAuthor: ${authorName}\nDate: ${new Date().toLocaleDateString()}\n\n## Summary\n${selectedKnowhow.summary}\n\n## Content\n${selectedKnowhow.content || selectedKnowhow.summary}\n\nTags: ${selectedKnowhow.tags?.join(', ') || ''}`;
+                        const blob = new Blob([content], { type: 'text/markdown' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `${selectedKnowhow.title}.md`;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                      }}
+                      className="flex items-center gap-2 px-3 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-lg text-[10px] font-black hover:bg-slate-200 dark:hover:bg-slate-700 transition-all uppercase tracking-widest"
+                    >
+                      <FileText className="w-3.5 h-3.5" />
+                      MD
+                    </button>
+                    <button 
+                      onClick={() => {
+                        const authorName = members.find(m => m.id === selectedKnowhow.authorId)?.name || selectedKnowhow.authorId;
+                        const html = `
+                          <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+                          <head><meta charset='utf-8'><title>${selectedKnowhow.title}</title></head>
+                          <body>
+                            <h1>${selectedKnowhow.title}</h1>
+                            <p><b>카테고리:</b> ${selectedKnowhow.category}</p>
+                            <p><b>작성자:</b> ${authorName}</p>
+                            <p><b>요약:</b> ${selectedKnowhow.summary}</p>
+                            <hr/>
+                            <div>${selectedKnowhow.content || selectedKnowhow.summary}</div>
+                          </body>
+                          </html>
+                        `;
+                        const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `${selectedKnowhow.title}.doc`;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                      }}
+                      className="flex items-center gap-2 px-3 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-lg text-[10px] font-black hover:bg-slate-200 dark:hover:bg-slate-700 transition-all uppercase tracking-widest"
+                    >
+                      <FileText className="w-3.5 h-3.5" />
+                      DOCX
+                    </button>
+                    <button 
+                      onClick={() => {
+                        const authorName = members.find(m => m.id === selectedKnowhow.authorId)?.name || selectedKnowhow.authorId;
+                        const doc = new jsPDF();
+                        doc.text(`Title: ${selectedKnowhow.title}`, 10, 10);
+                        doc.text(`Author: ${authorName}`, 10, 20);
+                        doc.text(`Category: ${selectedKnowhow.category}`, 10, 30);
+                        doc.text(`Summary: ${selectedKnowhow.summary}`, 10, 40, { maxWidth: 180 });
+                        doc.save(`${selectedKnowhow.title}.pdf`);
+                      }}
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-[10px] font-black hover:bg-blue-700 shadow-lg shadow-blue-500/20 transition-all uppercase tracking-widest"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      PDF
+                    </button>
+                  </div>
+                </div>
             </div>
           )}
         </Modal>
