@@ -266,8 +266,6 @@ export default function App() {
 
   const [newMemberName, setNewMemberName] = useState('');
   const [newMemberSpecialties, setNewMemberSpecialties] = useState('');
-  const [selectedAvatarSeed, setSelectedAvatarSeed] = useState('Felix');
-  const avatarSeeds = ['Felix', 'Aneka', 'Caleb', 'Buddy', 'Casper', 'Midnight', 'Spooky', 'Ginger', 'Snowball', 'Lucky', 'Cookie', 'Bear', 'Coco', 'Angel'];
   const [newProject, setNewProject] = useState<Partial<Project>>({
     ownerId: '',
     title: '',
@@ -447,7 +445,7 @@ export default function App() {
       // Update existing member
       const { error } = await supabase.from('members').update({
         name: newMemberName,
-        avatar_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${selectedAvatarSeed}`,
+        avatar_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${newMemberName}`,
         specialties: specialties
       }).eq('id', editingMemberId);
 
@@ -455,7 +453,7 @@ export default function App() {
         setMembers(prev => prev.map(m => m.id === editingMemberId ? {
           ...m,
           name: newMemberName,
-          avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${selectedAvatarSeed}`,
+          avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${newMemberName}`,
           specialties: specialties
         } : m));
         setMemberModalOpen(false);
@@ -463,7 +461,8 @@ export default function App() {
         setNewMemberName('');
         setNewMemberSpecialties('');
       } else {
-        alert('멤버 수정 중 오류가 발생했습니다.');
+        console.error('Member update error:', error);
+        alert(`멤버 수정 중 오류가 발생했습니다: ${error.message}`);
       }
     } else {
       // Create new member
@@ -471,7 +470,7 @@ export default function App() {
         id: `${Date.now()}`,
         name: newMemberName,
         role: 'Builder',
-        avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${selectedAvatarSeed}`,
+        avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${newMemberName}`,
         specialties: specialties
       };
 
@@ -489,7 +488,8 @@ export default function App() {
         setNewMemberSpecialties('');
         setMemberModalOpen(false);
       } else {
-        alert('멤버 추가 중 오류가 발생했습니다.');
+        console.error('Member create error:', error);
+        alert(`멤버 추가 중 오류가 발생했습니다: ${error.message}`);
       }
     }
   };
@@ -498,9 +498,6 @@ export default function App() {
     setEditingMemberId(member.id);
     setNewMemberName(member.name);
     setNewMemberSpecialties(member.specialties?.join(', ') || '');
-    // Try to extract seed from avatarUrl if possible, else default to 'Felix'
-    const seedMatch = member.avatarUrl.match(/seed=([^&]+)/);
-    setSelectedAvatarSeed(seedMatch ? seedMatch[1] : 'Felix');
     setMemberModalOpen(true);
   };
 
@@ -915,7 +912,6 @@ export default function App() {
                   setEditingMemberId(null);
                   setNewMemberName('');
                   setNewMemberSpecialties('');
-                  setSelectedAvatarSeed('Felix');
                   setMemberModalOpen(true);
                 }}
                 className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-2xl font-black shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-all active:scale-95"
@@ -1464,31 +1460,6 @@ export default function App() {
           title={editingMemberId ? "빌더 정보 수정" : "새로운 빌더 등록"}
         >
           <form onSubmit={handleAddMember} className="space-y-6">
-            <div>
-              <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">캐릭터 선택</label>
-              <div className="grid grid-cols-7 gap-3 mb-6 p-2 bg-slate-50 dark:bg-slate-900 rounded-[2rem] border border-slate-100 dark:border-slate-800">
-                {avatarSeeds.map(seed => (
-                  <button
-                    key={seed}
-                    type="button"
-                    onClick={() => setSelectedAvatarSeed(seed)}
-                    className={`relative rounded-2xl overflow-hidden transition-all aspect-square border-4 ${selectedAvatarSeed === seed ? 'border-blue-600 scale-105 shadow-lg' : 'border-transparent hover:border-slate-200'}`}
-                  >
-                    <img 
-                      src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}`} 
-                      alt={seed} 
-                      className="w-full h-full object-cover"
-                      referrerPolicy="no-referrer"
-                    />
-                    {selectedAvatarSeed === seed && (
-                      <div className="absolute inset-0 bg-blue-600/10 flex items-center justify-center">
-                        <div className="w-2 h-2 bg-blue-600 rounded-full" />
-                      </div>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
             <div>
               <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">멤버 실명</label>
               <input 
