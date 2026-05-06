@@ -1021,7 +1021,7 @@ export const Scratchpad = ({
               isDarkMode ? 'bg-slate-800' : 'bg-white'
             }`}
             style={{ 
-              minHeight: '850px', 
+              minHeight: '1200px', 
               boxShadow: '0 25px 50px -12px rgba(0,0,0,0.1), inset 0 0 100px rgba(0,0,0,0.02)',
               backgroundImage: 'linear-gradient(#f0f0f0 1.1px, transparent 1.1px)',
               backgroundSize: '100% 2rem',

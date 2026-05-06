@@ -63,7 +63,8 @@ export const BuilderChat = ({ isDarkMode, context }: BuilderChatProps) => {
       }
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to get response');
+        console.error('API Error Response:', response.status, responseText);
+        throw new Error(data.error || `서버 오류 (Status: ${response.status})`);
       }
 
       setMessages(prev => [...prev, { role: 'assistant', content: data.message }]);
