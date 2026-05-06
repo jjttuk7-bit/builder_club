@@ -22,7 +22,8 @@ import {
   Settings,
   BookMarked,
   Download,
-  FileText
+  FileText,
+  Sparkles
 } from 'lucide-react';
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
@@ -58,6 +59,7 @@ import {
   BuilderLog,
   Scratchpad
 } from './components/dashboard';
+import { BuilderChat } from './components/BuilderChat';
 import { Modal } from './components/ui/modal';
 import { supabase } from './lib/supabase';
 import { projects as initialProjects } from './data/projects';
@@ -1020,6 +1022,7 @@ export default function App() {
         { name: '빌더 로그', icon: BookMarked },
         { name: '빌더의 낙서장', icon: FileText },
         { name: '지식 공유', icon: Tag },
+        { name: '빌더 AI 챗', icon: Sparkles },
       ]
     },
     {
@@ -1159,7 +1162,21 @@ export default function App() {
             isDarkMode={isDarkMode}
           />
         );
-      case '지식 공유':
+      case '빌더 AI 챗':
+        return (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <BuilderChat 
+              isDarkMode={isDarkMode} 
+              context={{
+                members,
+                projects,
+                knowhows,
+                scratchpadNotes
+              }} 
+            />
+          </div>
+        );
+      case '지식 공유': // This is a trick to find a good spot if needed, but I'll use the existing switch.
         return (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="flex justify-between items-center mb-8">
