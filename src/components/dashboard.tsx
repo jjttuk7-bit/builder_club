@@ -22,7 +22,8 @@ import {
   Activity,
   MessageSquare,
   BookMarked,
-  Hash
+  Hash,
+  Briefcase
 } from 'lucide-react';
 import React from 'react';
 import { Project, Knowhow, Member, Meeting, BuilderMemo } from '../types';
@@ -639,14 +640,16 @@ interface BoardProps {
 interface BuilderLogProps {
   memos: BuilderMemo[];
   members: Member[];
+  projects: Project[];
   onDelete: (id: string) => void;
-  onCreate: (content: string, tags: string[], authorId: string) => void;
+  onCreate: (content: string, tags: string[], authorId: string, projectId?: string) => void;
   isDarkMode: boolean;
 }
 
 export const BuilderLog = ({
   memos,
   members,
+  projects,
   onDelete,
   onCreate,
   isDarkMode
@@ -654,6 +657,7 @@ export const BuilderLog = ({
   const [content, setContent] = React.useState('');
   const [tagInput, setTagInput] = React.useState('');
   const [selectedAuthorId, setSelectedAuthorId] = React.useState('');
+  const [selectedProjectId, setSelectedProjectId] = React.useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -662,9 +666,10 @@ export const BuilderLog = ({
       return;
     }
     const tags = tagInput.split(',').map(t => t.trim()).filter(t => t !== '');
-    onCreate(content, tags, selectedAuthorId);
+    onCreate(content, tags, selectedAuthorId, selectedProjectId || undefined);
     setContent('');
     setTagInput('');
+    setSelectedProjectId('');
   };
 
   return (
@@ -681,33 +686,49 @@ export const BuilderLog = ({
 
       <div className={`mb-10 p-8 rounded-[2.5rem] border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100 shadow-sm'} transition-all`}>
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="flex flex-col sm:flex-row gap-6">
-            <div className="w-full sm:w-64">
-              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 px-1">기록자 선택</label>
-              <select 
-                value={selectedAuthorId}
-                onChange={(e) => setSelectedAuthorId(e.target.value)}
-                className={`w-full px-4 py-3.5 rounded-2xl border font-bold text-sm ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-100 text-slate-800 focus:bg-white'} outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all`}
-              >
-                <option value="">본인 이름을 선택하세요</option>
-                {members.map(member => (
-                  <option key={member.id} value={member.id}>{member.name}</option>
-                ))}
-              </select>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-6">
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 px-1">기록자</label>
+                <select 
+                  value={selectedAuthorId}
+                  onChange={(e) => setSelectedAuthorId(e.target.value)}
+                  className={`w-full px-4 py-3.5 rounded-2xl border font-bold text-sm ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-100 text-slate-800 focus:bg-white'} outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all`}
+                >
+                  <option value="">본인 이름을 선택하세요</option>
+                  {members.map(member => (
+                    <option key={member.id} value={member.id}>{member.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 px-1">관련 프로젝트 (선택)</label>
+                <select 
+                  value={selectedProjectId}
+                  onChange={(e) => setSelectedProjectId(e.target.value)}
+                  className={`w-full px-4 py-3.5 rounded-2xl border font-bold text-sm ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-100 text-slate-800 focus:bg-white'} outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all`}
+                >
+                  <option value="">연관된 프로젝트가 있나요?</option>
+                  {projects.map(project => (
+                    <option key={project.id} value={project.id}>{project.title}</option>
+                  ))}
+                </select>
+              </div>
             </div>
             
-            <div className="flex-1">
+            <div>
               <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 px-1">수행 중인 메모 내용</label>
               <textarea
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 placeholder="어떤 일을 수행하셨나요? 핵심 이슈나 아이디어를 기록하세요."
-                className={`w-full min-h-[120px] p-5 rounded-2xl border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-100' : 'bg-slate-50 border-slate-100 text-slate-800 focus:bg-white'} outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-bold text-base resize-none`}
+                className={`w-full h-[162px] p-5 rounded-2xl border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-100' : 'bg-slate-50 border-slate-100 text-slate-800 focus:bg-white'} outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-bold text-base resize-none`}
               />
             </div>
           </div>
           
-          <div className="flex flex-col sm:flex-row gap-4 items-center pl-0 sm:pl-[280px]">
+          <div className="flex flex-col sm:flex-row gap-4 items-center">
             <div className="relative flex-1 w-full">
               <Hash className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
@@ -731,6 +752,7 @@ export const BuilderLog = ({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 px-2">
         {memos.map(memo => {
           const author = members.find(m => m.id === memo.authorId);
+          const project = projects.find(p => p.id === memo.projectId);
           return (
             <motion.div 
               layout
@@ -751,6 +773,13 @@ export const BuilderLog = ({
                   <div className="text-[9px] text-slate-400 font-bold">{new Date(memo.createdAt).toLocaleString()}</div>
                 </div>
               </div>
+
+              {project && (
+                <div className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-[9px] font-black mb-3 ${isDarkMode ? 'bg-blue-900/30 text-blue-400 border border-blue-800/50' : 'bg-blue-50 text-blue-600 border border-blue-100'}`}>
+                  <Briefcase className="w-2.5 h-2.5" />
+                  {project.title}
+                </div>
+              )}
 
               <p className={`text-sm font-bold leading-relaxed mb-4 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>{memo.content}</p>
               

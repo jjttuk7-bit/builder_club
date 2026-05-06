@@ -175,6 +175,7 @@ export default function App() {
         if (memoData) setMemos(memoData.map(m => ({
           id: m.id,
           authorId: m.author_id,
+          projectId: m.project_id,
           content: m.content,
           tags: m.tags || [],
           createdAt: m.created_at
@@ -383,11 +384,11 @@ export default function App() {
     }
   };
 
-  const handleCreateMemo = async (content: string, tags: string[], authorId: string) => {
+  const handleCreateMemo = async (content: string, tags: string[], authorId: string, projectId?: string) => {
     try {
       const { data, error } = await supabase
         .from('builder_memos')
-        .insert([{ content, tags, author_id: authorId, created_at: new Date().toISOString() }])
+        .insert([{ content, tags, author_id: authorId, project_id: projectId, created_at: new Date().toISOString() }])
         .select();
       
       if (error) throw error;
@@ -395,6 +396,7 @@ export default function App() {
         setMemos([{
           id: data[0].id,
           authorId: data[0].author_id,
+          projectId: data[0].project_id,
           content: data[0].content,
           tags: data[0].tags || [],
           createdAt: data[0].created_at
@@ -405,6 +407,7 @@ export default function App() {
       const newMemo: BuilderMemo = {
         id: Math.random().toString(36).substring(2, 9),
         authorId: authorId,
+        projectId: projectId,
         content,
         tags,
         createdAt: new Date().toISOString()
@@ -1058,6 +1061,7 @@ export default function App() {
           <BuilderLog 
             memos={memos}
             members={members}
+            projects={projects}
             onDelete={handleDeleteMemo}
             onCreate={handleCreateMemo}
             isDarkMode={isDarkMode}
