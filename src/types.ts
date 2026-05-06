@@ -101,3 +101,10 @@ export interface BuilderMemo {
   tags: string[];
   createdAt: string;
 }
+
+export interface ScratchpadNote {
+  id: string;
+  authorId: string;
+  content: string;
+  createdAt: string;
+}

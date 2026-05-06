@@ -55,7 +55,8 @@ import {
   MeetingBoard,
   ActivityFeed,
   Board,
-  BuilderLog
+  BuilderLog,
+  Scratchpad
 } from './components/dashboard';
 import { Modal } from './components/ui/modal';
 import { supabase } from './lib/supabase';
@@ -98,6 +99,7 @@ export default function App() {
   const [marketingPosts, setMarketingPosts] = useState<MarketingPost[]>([]);
   const [marketingComments, setMarketingComments] = useState<MarketingComment[]>([]);
   const [memos, setMemos] = useState<BuilderMemo[]>([]);
+  const [scratchpadNotes, setScratchpadNotes] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Supabase Data Fetching
@@ -225,6 +227,16 @@ export default function App() {
           content: m.content,
           tags: m.tags || [],
           createdAt: m.created_at
+        })));
+
+        // Fetch Scratchpad Notes
+        const { data: sData, error: sError } = await supabase.from('scratchpad_notes').select('*').order('created_at', { ascending: false });
+        if (sError) throw sError;
+        if (sData) setScratchpadNotes(sData.map(s => ({
+          id: s.id,
+          author_id: s.author_id,
+          content: s.content,
+          created_at: s.created_at
         })));
       } catch (error: any) {
         console.error('Error fetching data:', error);
@@ -447,6 +459,52 @@ export default function App() {
     } catch (error) {
       console.error('Error deleting memo:', error);
       setMemos(memos.filter(m => m.id !== id));
+    }
+  };
+
+  const handleCreateScratchpadNote = async (content: string, authorId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('scratchpad_notes')
+        .insert([{ content, author_id: authorId, created_at: new Date().toISOString() }])
+        .select();
+      if (error) throw error;
+      if (data) {
+        setScratchpadNotes([{
+          id: data[0].id,
+          author_id: data[0].author_id,
+          content: data[0].content,
+          created_at: data[0].created_at
+        }, ...scratchpadNotes]);
+      }
+    } catch (error: any) {
+      console.error('Error creating scratchpad note:', error);
+      alert(`메모 저장 중 오류가 발생했습니다: ${error.message}`);
+    }
+  };
+
+  const handleUpdateScratchpadNote = async (id: string, content: string) => {
+    try {
+      const { error } = await supabase
+        .from('scratchpad_notes')
+        .update({ content })
+        .eq('id', id);
+      if (error) throw error;
+      setScratchpadNotes(scratchpadNotes.map(n => n.id === id ? { ...n, content } : n));
+    } catch (error: any) {
+      console.error('Error updating scratchpad note:', error);
+      alert(`메모 수정 중 오류가 발생했습니다: ${error.message}`);
+    }
+  };
+
+  const handleDeleteScratchpadNote = async (id: string) => {
+    if (!window.confirm('이 메모를 삭제하시겠습니까?')) return;
+    try {
+      const { error } = await supabase.from('scratchpad_notes').delete().eq('id', id);
+      if (error) throw error;
+      setScratchpadNotes(scratchpadNotes.filter(n => n.id !== id));
+    } catch (error: any) {
+      console.error('Error deleting scratchpad note:', error);
     }
   };
 
@@ -960,6 +1018,7 @@ export default function App() {
         { name: '프로젝트 현황', icon: Briefcase },
         { name: '마케팅 실행', icon: Rocket },
         { name: '빌더 로그', icon: BookMarked },
+        { name: '빌더의 낙서장', icon: FileText },
         { name: '지식 공유', icon: Tag },
       ]
     },
@@ -1086,6 +1145,17 @@ export default function App() {
             projects={projects}
             onDelete={handleDeleteMemo}
             onCreate={handleCreateMemo}
+            isDarkMode={isDarkMode}
+          />
+        );
+      case '빌더의 낙서장':
+        return (
+          <Scratchpad 
+            notes={scratchpadNotes} 
+            members={members} 
+            onCreate={handleCreateScratchpadNote}
+            onUpdate={handleUpdateScratchpadNote}
+            onDelete={handleDeleteScratchpadNote}
             isDarkMode={isDarkMode}
           />
         );
