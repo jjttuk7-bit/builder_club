@@ -33,7 +33,7 @@ import { projects as initialProjects } from './data/projects';
 import { knowhows as initialKnowhows } from './data/knowhows';
 import { members as initialMembers } from './data/members';
 import { meeting as initialMeeting } from './data/meeting';
-import { Project, Knowhow, Member, Meeting, ProjectFeedback, FreeBoardPost } from './types';
+import { Project, Knowhow, Member, Meeting, ProjectFeedback, FreeBoardPost, FreeBoardComment } from './types';
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
@@ -53,6 +53,7 @@ export default function App() {
   const [members, setMembers] = useState<Member[]>(initialMembers);
   const [meeting, setMeeting] = useState<Meeting>(initialMeeting);
   const [posts, setPosts] = useState<FreeBoardPost[]>([]);
+  const [comments, setComments] = useState<FreeBoardComment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Supabase Data Fetching
@@ -109,6 +110,16 @@ export default function App() {
           authorId: p.author_id,
           content: p.content,
           createdAt: p.created_at
+        })));
+
+        // Fetch Comments
+        const { data: cmData } = await supabase.from('comments').select('*').order('created_at', { ascending: true });
+        if (cmData) setComments(cmData.map(c => ({
+          id: c.id,
+          postId: c.post_id,
+          authorId: c.author_id,
+          content: c.content,
+          createdAt: c.created_at
         })));
 
         // Fetch Meeting Info
@@ -191,14 +202,58 @@ export default function App() {
       const { error } = await supabase.from('posts').delete().eq('id', id);
       if (error) throw error;
       setPosts(posts.filter(p => p.id !== id));
+      setComments(comments.filter(c => c.postId !== id));
     } catch (error) {
       console.error('Error deleting post:', error);
       setPosts(posts.filter(p => p.id !== id));
     }
   };
 
+  const handleCreateComment = async (postId: string, content: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('comments')
+        .insert([{ post_id: postId, content, author_id: 'anonymous', created_at: new Date().toISOString() }])
+        .select();
+      
+      if (error) throw error;
+      if (data) {
+        setComments([...comments, {
+          id: data[0].id,
+          postId: data[0].post_id,
+          authorId: data[0].author_id,
+          content: data[0].content,
+          createdAt: data[0].created_at
+        }]);
+      }
+    } catch (error) {
+      console.error('Error creating comment:', error);
+      const newComment: FreeBoardComment = {
+        id: Math.random().toString(36).substring(2, 9),
+        postId,
+        authorId: 'anonymous',
+        content,
+        createdAt: new Date().toISOString()
+      };
+      setComments([...comments, newComment]);
+    }
+  };
+
+  const handleDeleteComment = async (id: string) => {
+    if (!window.confirm('댓글을 삭제하시겠습니까?')) return;
+    try {
+      const { error } = await supabase.from('comments').delete().eq('id', id);
+      if (error) throw error;
+      setComments(comments.filter(c => c.id !== id));
+    } catch (error) {
+      console.error('Error deleting comment:', error);
+      setComments(comments.filter(c => c.id !== id));
+    }
+  };
+
   // Modals state
   const [isMemberModalOpen, setMemberModalOpen] = useState(false);
+  const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
   const [isProjectModalOpen, setProjectModalOpen] = useState(false);
   const [isProjectDetailModalOpen, setProjectDetailModalOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
@@ -211,6 +266,8 @@ export default function App() {
 
   const [newMemberName, setNewMemberName] = useState('');
   const [newMemberSpecialties, setNewMemberSpecialties] = useState('');
+  const [selectedAvatarSeed, setSelectedAvatarSeed] = useState('Felix');
+  const avatarSeeds = ['Felix', 'Aneka', 'Caleb', 'Buddy', 'Casper', 'Midnight', 'Spooky', 'Ginger', 'Snowball', 'Lucky', 'Cookie', 'Bear', 'Coco', 'Angel'];
   const [newProject, setNewProject] = useState<Partial<Project>>({
     ownerId: '',
     title: '',
@@ -386,30 +443,65 @@ export default function App() {
     
     const specialties = newMemberSpecialties.split(',').map(s => s.trim()).filter(s => s !== '');
     
-    const newMember: Member = {
-      id: `${Date.now()}`,
-      name: newMemberName,
-      role: 'Builder',
-      avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${newMemberName}`,
-      specialties: specialties
-    };
+    if (editingMemberId) {
+      // Update existing member
+      const { error } = await supabase.from('members').update({
+        name: newMemberName,
+        avatar_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${selectedAvatarSeed}`,
+        specialties: specialties
+      }).eq('id', editingMemberId);
 
-    const { error } = await supabase.from('members').insert({
-      id: newMember.id,
-      name: newMember.name,
-      role: newMember.role,
-      avatar_url: newMember.avatarUrl,
-      specialties: specialties
-    });
-
-    if (!error) {
-      setMembers([...members, newMember]);
-      setNewMemberName('');
-      setNewMemberSpecialties('');
-      setMemberModalOpen(false);
+      if (!error) {
+        setMembers(prev => prev.map(m => m.id === editingMemberId ? {
+          ...m,
+          name: newMemberName,
+          avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${selectedAvatarSeed}`,
+          specialties: specialties
+        } : m));
+        setMemberModalOpen(false);
+        setEditingMemberId(null);
+        setNewMemberName('');
+        setNewMemberSpecialties('');
+      } else {
+        alert('멤버 수정 중 오류가 발생했습니다.');
+      }
     } else {
-      alert('멤버 추가 중 오류가 발생했습니다.');
+      // Create new member
+      const newMember: Member = {
+        id: `${Date.now()}`,
+        name: newMemberName,
+        role: 'Builder',
+        avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${selectedAvatarSeed}`,
+        specialties: specialties
+      };
+
+      const { error } = await supabase.from('members').insert({
+        id: newMember.id,
+        name: newMember.name,
+        role: newMember.role,
+        avatar_url: newMember.avatarUrl,
+        specialties: specialties
+      });
+
+      if (!error) {
+        setMembers([...members, newMember]);
+        setNewMemberName('');
+        setNewMemberSpecialties('');
+        setMemberModalOpen(false);
+      } else {
+        alert('멤버 추가 중 오류가 발생했습니다.');
+      }
     }
+  };
+
+  const handleEditMemberOpen = (member: Member) => {
+    setEditingMemberId(member.id);
+    setNewMemberName(member.name);
+    setNewMemberSpecialties(member.specialties?.join(', ') || '');
+    // Try to extract seed from avatarUrl if possible, else default to 'Felix'
+    const seedMatch = member.avatarUrl.match(/seed=([^&]+)/);
+    setSelectedAvatarSeed(seedMatch ? seedMatch[1] : 'Felix');
+    setMemberModalOpen(true);
   };
 
   const handleEditProject = (project: Project) => {
@@ -804,9 +896,12 @@ export default function App() {
         return (
           <FreeBoard 
             posts={posts} 
+            comments={comments}
             members={members} 
             onDelete={handleDeletePost} 
             onCreate={handleCreatePost}
+            onDeleteComment={handleDeleteComment}
+            onCreateComment={handleCreateComment}
             isDarkMode={isDarkMode}
           />
         );
@@ -816,7 +911,13 @@ export default function App() {
             <div className="flex justify-between items-center mb-8">
               <h2 className={`text-3xl font-black ${isDarkMode ? 'text-white' : 'text-slate-800'} tracking-tighter transition-colors`}>커뮤니티 멤버 관리</h2>
               <button 
-                onClick={() => setMemberModalOpen(true)}
+                onClick={() => {
+                  setEditingMemberId(null);
+                  setNewMemberName('');
+                  setNewMemberSpecialties('');
+                  setSelectedAvatarSeed('Felix');
+                  setMemberModalOpen(true);
+                }}
                 className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-2xl font-black shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-all active:scale-95"
               >
                 <Plus className="w-5 h-5" />
@@ -825,23 +926,29 @@ export default function App() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {members.map(member => (
-                <div key={member.id} className={`p-6 flex items-center gap-4 group transition-all rounded-3xl border ${isDarkMode ? 'bg-slate-900 border-slate-800 hover:border-blue-800' : 'bg-white border-slate-200 hover:border-blue-200 hover:shadow-sm'}`}>
-                  <img src={member.avatarUrl} alt={member.name} className="w-12 h-12 rounded-full bg-slate-100" referrerPolicy="no-referrer" />
+                <div 
+                  key={member.id} 
+                  onClick={() => handleEditMemberOpen(member)}
+                  className={`p-6 flex items-center gap-4 group transition-all rounded-3xl border cursor-pointer ${isDarkMode ? 'bg-slate-900 border-slate-800 hover:border-blue-800' : 'bg-white border-slate-200 hover:border-blue-200 hover:shadow-sm'}`}
+                >
+                  <img src={member.avatarUrl} alt={member.name} className="w-12 h-12 rounded-full bg-slate-100 group-hover:scale-110 transition-transform" referrerPolicy="no-referrer" />
                   <div className="flex-1">
                     <div className={`font-black ${isDarkMode ? 'text-slate-100' : 'text-slate-800'} text-sm tracking-tight`}>{member.name}</div>
                     <div className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{member.role}</div>
                   </div>
-                  <button 
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteMember(member.id);
-                    }}
-                    className="p-2 text-slate-500 dark:text-slate-400 hover:text-rose-500 transition-all hover:scale-110 active:scale-95 cursor-pointer z-20"
-                    title="멤버 삭제"
-                  >
-                    <Trash2 className="w-5 h-5" />
-                  </button>
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button 
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteMember(member.id);
+                      }}
+                      className="p-2 text-slate-400 hover:text-rose-500 transition-all hover:scale-110 active:scale-95"
+                      title="멤버 삭제"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               ))}
               {members.length === 0 && (
@@ -1350,10 +1457,38 @@ export default function App() {
 
         <Modal 
           isOpen={isMemberModalOpen} 
-          onClose={() => setMemberModalOpen(false)} 
-          title="새로운 빌더 등록"
+          onClose={() => {
+            setMemberModalOpen(false);
+            setEditingMemberId(null);
+          }} 
+          title={editingMemberId ? "빌더 정보 수정" : "새로운 빌더 등록"}
         >
           <form onSubmit={handleAddMember} className="space-y-6">
+            <div>
+              <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">캐릭터 선택</label>
+              <div className="grid grid-cols-7 gap-3 mb-6 p-2 bg-slate-50 dark:bg-slate-900 rounded-[2rem] border border-slate-100 dark:border-slate-800">
+                {avatarSeeds.map(seed => (
+                  <button
+                    key={seed}
+                    type="button"
+                    onClick={() => setSelectedAvatarSeed(seed)}
+                    className={`relative rounded-2xl overflow-hidden transition-all aspect-square border-4 ${selectedAvatarSeed === seed ? 'border-blue-600 scale-105 shadow-lg' : 'border-transparent hover:border-slate-200'}`}
+                  >
+                    <img 
+                      src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}`} 
+                      alt={seed} 
+                      className="w-full h-full object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                    {selectedAvatarSeed === seed && (
+                      <div className="absolute inset-0 bg-blue-600/10 flex items-center justify-center">
+                        <div className="w-2 h-2 bg-blue-600 rounded-full" />
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div>
               <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">멤버 실명</label>
               <input 
@@ -1377,7 +1512,7 @@ export default function App() {
               />
             </div>
             <button className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black shadow-xl shadow-blue-500/10 hover:bg-blue-700 transition-all">
-              멤버 추가 완료
+              {editingMemberId ? "수정 완료" : "멤버 추가 완료"}
             </button>
           </form>
         </Modal>

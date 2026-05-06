@@ -69,3 +69,11 @@ export interface FreeBoardPost {
   content: string;
   createdAt: string;
 }
+
+export interface FreeBoardComment {
+  id: string;
+  postId: string;
+  authorId: string;
+  content: string;
+  createdAt: string;
+}

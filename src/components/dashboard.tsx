@@ -619,13 +619,25 @@ export const MeetingBoard = ({
 // --- Free Board ---
 interface FreeBoardProps {
   posts: any[];
+  comments: any[];
   members: Member[];
   onDelete: (id: string) => void;
   onCreate: (content: string) => void;
+  onDeleteComment: (id: string) => void;
+  onCreateComment: (postId: string, content: string) => void;
   isDarkMode: boolean;
 }
 
-export const FreeBoard = ({ posts, members, onDelete, onCreate, isDarkMode }: FreeBoardProps) => {
+export const FreeBoard = ({ 
+  posts, 
+  comments, 
+  members, 
+  onDelete, 
+  onCreate, 
+  onDeleteComment, 
+  onCreateComment, 
+  isDarkMode 
+}: FreeBoardProps) => {
   const [content, setContent] = React.useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -636,69 +648,111 @@ export const FreeBoard = ({ posts, members, onDelete, onCreate, isDarkMode }: Fr
   };
 
   return (
-    <section className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex items-center gap-3 mb-8">
+    <section className="animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-4xl mx-auto">
+      <div className="flex items-center gap-3 mb-8 px-4">
         <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/20">
           <MessageSquare className="w-6 h-6 text-white" />
         </div>
         <div>
-          <h2 className={`text-3xl font-black ${isDarkMode ? 'text-white' : 'text-slate-800'} tracking-tighter transition-colors uppercase`}>자유 게시판</h2>
-          <p className="text-slate-400 font-bold text-sm">빌더들의 자유로운 생각과 이야기를 나누어주세요.</p>
+          <h2 className={`text-2xl font-black ${isDarkMode ? 'text-white' : 'text-slate-800'} tracking-tighter transition-colors uppercase`}>자유 게시판</h2>
+          <p className="text-slate-400 font-bold text-xs">빌더들의 자유로운 생각과 이야기를 나누어주세요.</p>
         </div>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[3rem] p-8 shadow-sm mb-12 transition-colors">
-        <form onSubmit={handleSubmit} className="space-y-4">
+      <div className={`${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'} border rounded-3xl p-6 shadow-sm mb-10 transition-colors mx-4`}>
+        <form onSubmit={handleSubmit} className="flex gap-4 items-start">
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder="어떤 이야기를 나누고 싶으신가요? (마크다운 지원)"
-            className={`w-full min-h-[150px] p-8 rounded-[2rem] border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-600' : 'bg-slate-50 border-slate-100 text-slate-800 placeholder:text-slate-300'} outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all font-bold text-lg leading-relaxed`}
+            placeholder="어떤 이야기를 나누고 싶으신가요?"
+            className={`flex-1 min-h-[80px] p-4 rounded-2xl border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-600' : 'bg-slate-50 border-slate-100 text-slate-800 placeholder:text-slate-300'} outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all font-bold text-base resize-none`}
           />
-          <div className="flex justify-end">
-            <button 
-              type="submit"
-              className="bg-blue-600 text-white px-10 py-4 rounded-2xl font-black shadow-xl shadow-blue-500/20 hover:bg-blue-700 transition-all active:scale-95 text-lg"
-            >
-              이야기 등록하기
-            </button>
-          </div>
+          <button 
+            type="submit"
+            className="bg-blue-600 text-white px-6 py-4 h-[80px] rounded-2xl font-black shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-all active:scale-95 text-base"
+          >
+            등록
+          </button>
         </form>
       </div>
 
-      <div className="space-y-6">
+      <div className="space-y-6 px-4">
         {posts.map(post => {
           const author = members.find(m => m.id === post.authorId);
+          const postComments = comments.filter(c => c.postId === post.id);
+          
           return (
-            <div key={post.id} className={`p-8 rounded-[2.5rem] border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'} shadow-sm transition-all group`}>
-              <div className="flex items-start gap-6">
-                <img 
-                  src={author?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${post.authorId}`} 
-                  alt="author" 
-                  className="w-14 h-14 rounded-full bg-slate-100 shadow-sm ring-4 ring-white dark:ring-slate-800"
-                  referrerPolicy="no-referrer"
-                />
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <div className={`font-black ${isDarkMode ? 'text-slate-100' : 'text-slate-800'} text-lg tracking-tight`}>{author?.name || '익명 빌더'}</div>
-                      <div className="text-xs text-slate-400 font-bold uppercase tracking-widest">{new Date(post.createdAt).toLocaleString()}</div>
+            <div key={post.id} className={`rounded-3xl border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'} shadow-sm transition-all overflow-hidden`}>
+              <div className="p-6">
+                <div className="flex items-start gap-4">
+                  <img 
+                    src={author?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${post.authorId}`} 
+                    alt="author" 
+                    className="w-10 h-10 rounded-full bg-slate-100 shadow-sm ring-2 ring-white dark:ring-slate-800"
+                    referrerPolicy="no-referrer"
+                  />
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-2">
+                      <div>
+                        <div className={`font-black ${isDarkMode ? 'text-slate-100' : 'text-slate-800'} text-base tracking-tight`}>{author?.name || '익명 빌더'}</div>
+                        <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{new Date(post.createdAt).toLocaleString()}</div>
+                      </div>
+                      <button 
+                        onClick={() => onDelete(post.id)}
+                        className="p-2 text-slate-300 hover:text-rose-500 transition-all hover:bg-rose-50 rounded-xl"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
-                    <button 
-                      onClick={() => onDelete(post.id)}
-                      className="p-3 text-slate-300 hover:text-rose-500 transition-all hover:bg-rose-50 rounded-2xl"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </button>
+                    <p className={`text-base font-bold leading-relaxed whitespace-pre-wrap ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                      {post.content}
+                    </p>
                   </div>
-                  <p className={`text-lg font-bold leading-relaxed whitespace-pre-wrap ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                    {post.content}
-                  </p>
                 </div>
+              </div>
+
+              {/* Comment Section */}
+              <div className={`${isDarkMode ? 'bg-slate-800/50' : 'bg-slate-50/50'} border-t ${isDarkMode ? 'border-slate-800' : 'border-slate-100'} p-6`}>
+                <div className="space-y-4 mb-4">
+                  {postComments.map(comment => {
+                    const commentAuthor = members.find(m => m.id === comment.authorId);
+                    return (
+                      <div key={comment.id} className="flex gap-3 items-start">
+                        <img 
+                          src={commentAuthor?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${comment.authorId}`} 
+                          alt="comment author" 
+                          className="w-8 h-8 rounded-full bg-slate-100 border border-white dark:border-slate-700"
+                          referrerPolicy="no-referrer"
+                        />
+                        <div className="flex-1 bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-100 dark:border-slate-800 shadow-sm relative group">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className={`text-[11px] font-black tracking-wider uppercase ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>{commentAuthor?.name || '익명 빌더'}</span>
+                            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <span className="text-[10px] text-slate-400 font-bold">{new Date(comment.createdAt).toLocaleDateString()}</span>
+                              <button 
+                                onClick={() => onDeleteComment(comment.id)}
+                                className="text-slate-300 hover:text-rose-500 transition-colors"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          </div>
+                          <p className={`text-sm font-bold leading-relaxed ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>{comment.content}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                
+                <CommentInput 
+                  onSend={(text) => onCreateComment(post.id, text)} 
+                  isDarkMode={isDarkMode} 
+                />
               </div>
             </div>
           );
         })}
+        
         {posts.length === 0 && (
           <div className={`py-40 text-center border-2 border-dashed ${isDarkMode ? 'border-slate-800' : 'border-slate-100'} rounded-[3rem]`}>
             <MessageSquare className="w-16 h-16 text-slate-200 dark:text-slate-800 mx-auto mb-6" />
@@ -707,5 +761,34 @@ export const FreeBoard = ({ posts, members, onDelete, onCreate, isDarkMode }: Fr
         )}
       </div>
     </section>
+  );
+};
+
+const CommentInput = ({ onSend, isDarkMode }: { onSend: (text: string) => void, isDarkMode: boolean }) => {
+  const [text, setText] = React.useState('');
+  
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!text.trim()) return;
+    onSend(text);
+    setText('');
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="flex gap-2">
+      <input 
+        type="text"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder="댓글을 남겨보세요..."
+        className={`flex-1 px-4 py-2 rounded-xl border text-sm font-bold outline-none transition-all ${isDarkMode ? 'bg-slate-900 border-slate-700 text-slate-100 placeholder:text-slate-600 focus:border-blue-500' : 'bg-white border-slate-200 text-slate-800 placeholder:text-slate-300 focus:border-blue-500'}`}
+      />
+      <button 
+        type="submit"
+        className="bg-blue-600 text-white px-4 py-2 rounded-xl font-black text-sm shadow-md shadow-blue-500/10 hover:bg-blue-700 active:scale-95 transition-all"
+      >
+        댓글 달기
+      </button>
+    </form>
   );
 };
