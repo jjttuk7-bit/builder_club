@@ -28,6 +28,7 @@ import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { motion } from 'motion/react';
 import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
 import { 
   Header,
   ProjectBoard, 
@@ -220,11 +221,11 @@ export default function App() {
     }
   };
 
-  const handleCreatePost = async (content: string) => {
+  const handleCreatePost = async (content: string, authorId: string) => {
     try {
       const { data, error } = await supabase
         .from('posts')
-        .insert([{ content, author_id: 'anonymous', created_at: new Date().toISOString() }])
+        .insert([{ content, author_id: authorId, created_at: new Date().toISOString() }])
         .select();
       
       if (error) throw error;
@@ -241,7 +242,7 @@ export default function App() {
       // Fallback for demo
       const newPost: FreeBoardPost = {
         id: Math.random().toString(36).substring(2, 9),
-        authorId: 'anonymous',
+        authorId: authorId,
         content,
         createdAt: new Date().toISOString()
       };
@@ -262,11 +263,11 @@ export default function App() {
     }
   };
 
-  const handleCreateComment = async (postId: string, content: string) => {
+  const handleCreateComment = async (postId: string, content: string, authorId: string) => {
     try {
       const { data, error } = await supabase
         .from('comments')
-        .insert([{ post_id: postId, content, author_id: 'anonymous', created_at: new Date().toISOString() }])
+        .insert([{ post_id: postId, content, author_id: authorId, created_at: new Date().toISOString() }])
         .select();
       
       if (error) throw error;
@@ -284,7 +285,7 @@ export default function App() {
       const newComment: FreeBoardComment = {
         id: Math.random().toString(36).substring(2, 9),
         postId,
-        authorId: 'anonymous',
+        authorId: authorId,
         content,
         createdAt: new Date().toISOString()
       };
@@ -304,11 +305,11 @@ export default function App() {
     }
   };
 
-  const handleCreateMarketingPost = async (content: string) => {
+  const handleCreateMarketingPost = async (content: string, authorId: string) => {
     try {
       const { data, error } = await supabase
         .from('marketing_posts')
-        .insert([{ content, author_id: 'anonymous', created_at: new Date().toISOString() }])
+        .insert([{ content, author_id: authorId, created_at: new Date().toISOString() }])
         .select();
       
       if (error) throw error;
@@ -324,7 +325,7 @@ export default function App() {
       console.error('Error creating marketing post:', error);
       const newPost: MarketingPost = {
         id: Math.random().toString(36).substring(2, 9),
-        authorId: 'anonymous',
+        authorId: authorId,
         content,
         createdAt: new Date().toISOString()
       };
@@ -345,11 +346,11 @@ export default function App() {
     }
   };
 
-  const handleCreateMarketingComment = async (postId: string, content: string) => {
+  const handleCreateMarketingComment = async (postId: string, content: string, authorId: string) => {
     try {
       const { data, error } = await supabase
         .from('marketing_comments')
-        .insert([{ post_id: postId, content, author_id: 'anonymous', created_at: new Date().toISOString() }])
+        .insert([{ post_id: postId, content, author_id: authorId, created_at: new Date().toISOString() }])
         .select();
       
       if (error) throw error;
@@ -367,7 +368,7 @@ export default function App() {
       const newComment: MarketingComment = {
         id: Math.random().toString(36).substring(2, 9),
         postId,
-        authorId: 'anonymous',
+        authorId: authorId,
         content,
         createdAt: new Date().toISOString()
       };
@@ -1543,14 +1544,50 @@ export default function App() {
                       DOCX
                     </button>
                     <button 
-                      onClick={() => {
+                      onClick={async () => {
+                        if (!selectedKnowhow) return;
                         const authorName = members.find(m => m.id === selectedKnowhow.authorId)?.name || selectedKnowhow.authorId;
-                        const doc = new jsPDF();
-                        doc.text(`Title: ${selectedKnowhow.title}`, 10, 10);
-                        doc.text(`Author: ${authorName}`, 10, 20);
-                        doc.text(`Category: ${selectedKnowhow.category}`, 10, 30);
-                        doc.text(`Summary: ${selectedKnowhow.summary}`, 10, 40, { maxWidth: 180 });
-                        doc.save(`${selectedKnowhow.title}.pdf`);
+                        
+                        const element = document.createElement('div');
+                        element.style.position = 'absolute';
+                        element.style.left = '-9999px';
+                        element.style.padding = '40px';
+                        element.style.width = '800px';
+                        element.style.background = 'white';
+                        element.style.color = 'black';
+                        element.style.fontFamily = 'sans-serif';
+                        element.innerHTML = `
+                          <div style="font-family: sans-serif;">
+                            <h1 style="font-size: 24px; margin-bottom: 10px;">${selectedKnowhow.title}</h1>
+                            <div style="font-size: 14px; color: #666; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
+                              카테고리: ${selectedKnowhow.category} | 작성자: ${authorName} | 날짜: ${new Date().toLocaleDateString()}
+                            </div>
+                            <div style="margin-bottom: 20px; background: #f9f9f9; padding: 15px; border-radius: 8px;">
+                              <h3 style="font-size: 16px; margin-bottom: 5px;">요약</h3>
+                              <p style="font-size: 14px; line-height: 1.6;">${selectedKnowhow.summary}</p>
+                            </div>
+                            <div style="font-size: 14px; line-height: 1.8; white-space: pre-wrap;">
+                              ${selectedKnowhow.content || selectedKnowhow.summary}
+                            </div>
+                          </div>
+                        `;
+                        document.body.appendChild(element);
+                        
+                        try {
+                          const canvas = await html2canvas(element, { scale: 2 });
+                          const imgData = canvas.toDataURL('image/png');
+                          const pdf = new jsPDF('p', 'mm', 'a4');
+                          const pdfWidth = pdf.internal.pageSize.getWidth();
+                          const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+                          
+                          pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+                          pdf.save(`${selectedKnowhow.title}.pdf`);
+                        } catch (err) {
+                          console.error('PDF generation failed:', err);
+                          alert('PDF 생성 중 오류가 발생했습니다.');
+                        } finally {
+                          document.body.removeChild(element);
+                        }
                       }}
                       className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-[10px] font-black hover:bg-blue-700 shadow-lg shadow-blue-500/20 transition-all uppercase tracking-widest"
                     >

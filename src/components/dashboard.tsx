@@ -31,6 +31,7 @@ import React from 'react';
 import { Project, Knowhow, Member, Meeting, BuilderMemo } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
 
 // --- Header ---
 interface HeaderProps {
@@ -467,16 +468,18 @@ export const KnowhowSection = ({ knowhows, onDelete, members, onEdit, onView }: 
                   </div>
                 </div>
                 <div className="flex flex-col gap-2 relative">
-                  <div className="flex items-center gap-1 group/downloads">
+                  <div className="flex items-center group/downloads">
                     <button 
                       type="button"
-                      className="p-2 text-slate-300 dark:text-slate-600 hover:text-blue-600 transition-colors"
+                      className="p-2 text-slate-300 dark:text-slate-600 hover:text-blue-600 transition-colors z-10"
                       title="다운로드"
+                      onClick={(e) => e.stopPropagation()}
                     >
                       <Download className="w-5 h-5" />
                     </button>
-                    <div className="absolute right-full mr-2 hidden group-hover/downloads:flex flex-col bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl shadow-xl z-50 overflow-hidden w-24">
+                    <div className="absolute right-full top-0 hidden group-hover/downloads:flex flex-col bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl shadow-xl z-50 overflow-hidden w-28 translate-x-1">
                       <button 
+                        type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           const authorName = members.find(m => m.id === kh.authorId)?.name || kh.authorId;
@@ -489,11 +492,13 @@ export const KnowhowSection = ({ knowhows, onDelete, members, onEdit, onView }: 
                           a.click();
                           URL.revokeObjectURL(url);
                         }}
-                        className="px-3 py-2 text-[10px] font-black text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 text-left transition-colors uppercase tracking-widest"
+                        className="flex items-center gap-2 px-3 py-2 text-[10px] font-black text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 text-left transition-colors uppercase tracking-widest"
                       >
+                        <FileText className="w-3.5 h-3.5" />
                         MD
                       </button>
                       <button 
+                        type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           const authorName = members.find(m => m.id === kh.authorId)?.name || kh.authorId;
@@ -519,25 +524,62 @@ export const KnowhowSection = ({ knowhows, onDelete, members, onEdit, onView }: 
                           a.click();
                           URL.revokeObjectURL(url);
                         }}
-                        className="px-3 py-2 text-[10px] font-black text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 border-y border-slate-50 dark:border-slate-800 text-left transition-colors uppercase tracking-widest"
+                        className="flex items-center gap-2 px-3 py-2 text-[10px] font-black text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 border-y border-slate-50 dark:border-slate-800 text-left transition-colors uppercase tracking-widest"
                       >
+                        <FileText className="w-3.5 h-3.5" />
                         DOCX
                       </button>
                       <button 
-                        onClick={(e) => {
+                        type="button"
+                        onClick={async (e) => {
                           e.stopPropagation();
                           const authorName = members.find(m => m.id === kh.authorId)?.name || kh.authorId;
-                          const doc = new jsPDF();
-                          // Note: Standard PDF fonts don't support Korean. For full support, a custom font is needed.
-                          // This provides a basic English fallback or simple structure.
-                          doc.text(`Title: ${kh.title}`, 10, 10);
-                          doc.text(`Author: ${authorName}`, 10, 20);
-                          doc.text(`Category: ${kh.category}`, 10, 30);
-                          doc.text(`Summary: ${kh.summary}`, 10, 40, { maxWidth: 180 });
-                          doc.save(`${kh.title}.pdf`);
+                          
+                          // PDF Generation with Korean support (html2canvas)
+                          const element = document.createElement('div');
+                          element.style.position = 'absolute';
+                          element.style.left = '-9999px';
+                          element.style.padding = '40px';
+                          element.style.width = '800px';
+                          element.style.background = 'white';
+                          element.style.color = 'black';
+                          element.style.fontFamily = 'sans-serif';
+                          element.innerHTML = `
+                            <div style="font-family: sans-serif;">
+                              <h1 style="font-size: 24px; margin-bottom: 10px;">${kh.title}</h1>
+                              <div style="font-size: 14px; color: #666; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
+                                카테고리: ${kh.category} | 작성자: ${authorName} | 날짜: ${new Date().toLocaleDateString()}
+                              </div>
+                              <div style="margin-bottom: 20px; background: #f9f9f9; padding: 15px; border-radius: 8px;">
+                                <h3 style="font-size: 16px; margin-bottom: 5px;">요약</h3>
+                                <p style="font-size: 14px; line-height: 1.6;">${kh.summary}</p>
+                              </div>
+                              <div style="font-size: 14px; line-height: 1.8; white-space: pre-wrap;">
+                                ${kh.content || kh.summary}
+                              </div>
+                            </div>
+                          `;
+                          document.body.appendChild(element);
+                          
+                          try {
+                            const canvas = await html2canvas(element, { scale: 2 });
+                            const imgData = canvas.toDataURL('image/png');
+                            const pdf = new jsPDF('p', 'mm', 'a4');
+                            const pdfWidth = pdf.internal.pageSize.getWidth();
+                            const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+                            
+                            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+                            pdf.save(`${kh.title}.pdf`);
+                          } catch (err) {
+                            console.error('PDF generation failed:', err);
+                            alert('PDF 생성 중 오류가 발생했습니다.');
+                          } finally {
+                            document.body.removeChild(element);
+                          }
                         }}
-                        className="px-3 py-2 text-[10px] font-black text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 text-left transition-colors uppercase tracking-widest"
+                        className="flex items-center gap-2 px-3 py-2 text-[10px] font-black text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 text-left transition-colors uppercase tracking-widest"
                       >
+                        <Download className="w-3.5 h-3.5" />
                         PDF
                       </button>
                     </div>
@@ -708,9 +750,9 @@ interface BoardProps {
   comments: any[];
   members: Member[];
   onDelete: (id: string) => void;
-  onCreate: (content: string) => void;
+  onCreate: (content: string, authorId: string) => void;
   onDeleteComment: (id: string) => void;
-  onCreateComment: (postId: string, content: string) => void;
+  onCreateComment: (postId: string, content: string, authorId: string) => void;
   isDarkMode: boolean;
 }
 
@@ -898,11 +940,15 @@ export const Board = ({
   isDarkMode 
 }: BoardProps) => {
   const [content, setContent] = React.useState('');
+  const [selectedAuthorId, setSelectedAuthorId] = React.useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!content.trim()) return;
-    onCreate(content);
+    if (!content.trim() || !selectedAuthorId) {
+      if (!selectedAuthorId) alert('작성자를 선택해주세요!');
+      return;
+    }
+    onCreate(content, selectedAuthorId);
     setContent('');
   };
 
@@ -919,19 +965,35 @@ export const Board = ({
       </div>
 
       <div className={`${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'} border rounded-3xl p-6 shadow-sm mb-10 transition-colors mx-4`}>
-        <form onSubmit={handleSubmit} className="flex gap-4 items-start">
-          <textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder={placeholder}
-            className={`flex-1 min-h-[80px] p-4 rounded-2xl border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-600' : 'bg-slate-50 border-slate-100 text-slate-800 placeholder:text-slate-300'} outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all font-bold text-base resize-none`}
-          />
-          <button 
-            type="submit"
-            className="bg-blue-600 text-white px-6 py-4 h-[80px] rounded-2xl font-black shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-all active:scale-95 text-base"
-          >
-            등록
-          </button>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="flex flex-col sm:flex-row gap-4 items-start">
+            <div className="w-full sm:w-48">
+              <select 
+                value={selectedAuthorId}
+                onChange={(e) => setSelectedAuthorId(e.target.value)}
+                className={`w-full px-4 py-3.5 rounded-2xl border font-bold text-sm ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-100 text-slate-800 focus:bg-white'} outline-none focus:ring-4 focus:ring-blue-500/10 transition-all`}
+              >
+                <option value="">기록자 선택</option>
+                {members.map(member => (
+                  <option key={member.id} value={member.id}>{member.name}</option>
+                ))}
+              </select>
+            </div>
+            <textarea
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder={placeholder}
+              className={`flex-1 min-h-[100px] p-4 rounded-2xl border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-600' : 'bg-slate-50 border-slate-100 text-slate-800 placeholder:text-slate-300 focus:bg-white'} outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all font-bold text-base resize-none`}
+            />
+          </div>
+          <div className="flex justify-end">
+            <button 
+              type="submit"
+              className="bg-blue-600 text-white px-10 py-4 rounded-2xl font-black shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-all active:scale-95 text-base"
+            >
+              등록
+            </button>
+          </div>
         </form>
       </div>
 
@@ -1004,7 +1066,8 @@ export const Board = ({
                 </div>
                 
                 <CommentInput 
-                  onSend={(text) => onCreateComment(post.id, text)} 
+                  onSend={(text, authorId) => onCreateComment(post.id, text, authorId)} 
+                  members={members}
                   isDarkMode={isDarkMode} 
                 />
               </div>
@@ -1023,18 +1086,32 @@ export const Board = ({
   );
 };
 
-const CommentInput = ({ onSend, isDarkMode }: { onSend: (text: string) => void, isDarkMode: boolean }) => {
+const CommentInput = ({ onSend, members, isDarkMode }: { onSend: (text: string, authorId: string) => void, members: Member[], isDarkMode: boolean }) => {
   const [text, setText] = React.useState('');
+  const [selectedAuthorId, setSelectedAuthorId] = React.useState('');
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!text.trim()) return;
-    onSend(text);
+    if (!text.trim() || !selectedAuthorId) {
+      if (!selectedAuthorId) alert('작성자를 선택해주세요!');
+      return;
+    }
+    onSend(text, selectedAuthorId);
     setText('');
   };
 
   return (
     <form onSubmit={handleSubmit} className="flex gap-2">
+      <select 
+        value={selectedAuthorId}
+        onChange={(e) => setSelectedAuthorId(e.target.value)}
+        className={`px-3 py-2 rounded-xl border text-xs font-bold outline-none transition-all ${isDarkMode ? 'bg-slate-900 border-slate-700 text-slate-300' : 'bg-white border-slate-200 text-slate-600'}`}
+      >
+        <option value="">작성자</option>
+        {members.map(member => (
+          <option key={member.id} value={member.id}>{member.name}</option>
+        ))}
+      </select>
       <input 
         type="text"
         value={text}
