@@ -53,17 +53,25 @@ export const BuilderChat = ({ isDarkMode, context }: BuilderChatProps) => {
         }),
       });
 
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || 'Failed to get response');
+      const responseText = await response.text();
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (e) {
+        console.error('Failed to parse JSON response:', responseText);
+        throw new Error(`서버 응답이 올바른 형식이 아닙니다. (Status: ${response.status})`);
       }
 
-      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to get response');
+      }
+
       setMessages(prev => [...prev, { role: 'assistant', content: data.message }]);
     } catch (error: any) {
+      console.error('Chat error:', error);
       setMessages(prev => [...prev, { 
         role: 'assistant', 
-        content: `죄송합니다. 오류가 발생했습니다: ${error.message}. OpenAI API 키가 설정되어 있는지 확인해주세요.` 
+        content: `죄송합니다. 오류가 발생했습니다: ${error.message}.` 
       }]);
     } finally {
       setIsLoading(false);
