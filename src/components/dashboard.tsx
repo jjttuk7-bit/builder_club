@@ -1051,7 +1051,7 @@ export const Scratchpad = ({
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 placeholder="여기에 자유롭게 적어보세요... 떠오르는 모든 생각을 두서없이 적어도 좋습니다. (URL은 자동으로 링크로 변환됩니다)"
-                className={`flex-1 w-full bg-transparent border-none focus:ring-0 resize-none text-xl font-bold leading-[2rem] p-0 italic ${isDarkMode ? 'text-slate-200' : 'text-slate-700'}`}
+                className={`flex-1 w-full bg-transparent border-none focus:ring-0 resize-none text-xl font-bold leading-[2rem] p-0 italic min-h-[900px] ${isDarkMode ? 'text-slate-200' : 'text-slate-700'}`}
                 autoFocus
               />
 
