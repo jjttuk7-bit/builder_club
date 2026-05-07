@@ -108,3 +108,11 @@ export interface ScratchpadNote {
   content: string;
   createdAt: string;
 }
+
+export interface GalleryImage {
+  id: string;
+  authorId: string;
+  title: string;
+  imageUrl: string;
+  createdAt: string;
+}

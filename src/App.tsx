@@ -23,7 +23,8 @@ import {
   BookMarked,
   Download,
   FileText,
-  Sparkles
+  Sparkles,
+  Camera
 } from 'lucide-react';
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
@@ -60,6 +61,7 @@ import {
   Scratchpad
 } from './components/dashboard';
 import { BuilderChat } from './components/BuilderChat';
+import { ImageGallery } from './components/ImageGallery';
 import { Modal } from './components/ui/modal';
 import { supabase } from './lib/supabase';
 import { projects as initialProjects } from './data/projects';
@@ -76,7 +78,8 @@ import {
   FreeBoardComment,
   MarketingPost,
   MarketingComment,
-  BuilderMemo
+  BuilderMemo,
+  GalleryImage
 } from './types';
 
 export default function App() {
@@ -102,6 +105,7 @@ export default function App() {
   const [marketingComments, setMarketingComments] = useState<MarketingComment[]>([]);
   const [memos, setMemos] = useState<BuilderMemo[]>([]);
   const [scratchpadNotes, setScratchpadNotes] = useState<any[]>([]);
+  const [galleryImages, setGalleryImages] = useState<GalleryImage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Supabase Data Fetching
@@ -239,6 +243,17 @@ export default function App() {
           author_id: s.author_id,
           content: s.content,
           created_at: s.created_at
+        })));
+
+        // Fetch Gallery Images
+        const { data: gData, error: gError } = await supabase.from('gallery_images').select('*').order('created_at', { ascending: false });
+        if (gError) throw gError;
+        if (gData) setGalleryImages(gData.map(g => ({
+          id: g.id,
+          authorId: g.author_id,
+          title: g.title,
+          imageUrl: g.image_url,
+          createdAt: g.created_at
         })));
       } catch (error: any) {
         console.error('Error fetching data:', error);
@@ -507,6 +522,39 @@ export default function App() {
       setScratchpadNotes(scratchpadNotes.filter(n => n.id !== id));
     } catch (error: any) {
       console.error('Error deleting scratchpad note:', error);
+    }
+  };
+
+  const handleCreateGalleryImage = async (title: string, imageUrl: string, authorId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('gallery_images')
+        .insert([{ title, image_url: imageUrl, author_id: authorId, created_at: new Date().toISOString() }])
+        .select();
+      if (error) throw error;
+      if (data) {
+        setGalleryImages([{
+          id: data[0].id,
+          authorId: data[0].author_id,
+          title: data[0].title,
+          imageUrl: data[0].image_url,
+          createdAt: data[0].created_at
+        }, ...galleryImages]);
+      }
+    } catch (error: any) {
+      console.error('Error creating gallery image:', error);
+      alert(`이미지 저장 중 오류가 발생했습니다: ${error.message}`);
+    }
+  };
+
+  const handleDeleteGalleryImage = async (id: string) => {
+    if (!window.confirm('이 이미지를 삭제하시겠습니까?')) return;
+    try {
+      const { error } = await supabase.from('gallery_images').delete().eq('id', id);
+      if (error) throw error;
+      setGalleryImages(galleryImages.filter(img => img.id !== id));
+    } catch (error: any) {
+      console.error('Error deleting gallery image:', error);
     }
   };
 
@@ -1021,6 +1069,7 @@ export default function App() {
         { name: '마케팅 실행', icon: Rocket },
         { name: '빌더 로그', icon: BookMarked },
         { name: '빌더의 낙서장', icon: FileText },
+        { name: '빌더의 갤러리', icon: Camera },
         { name: '지식 공유', icon: Tag },
         { name: '빌더 AI 챗', icon: Sparkles },
       ]
@@ -1175,6 +1224,16 @@ export default function App() {
               }} 
             />
           </div>
+        );
+      case '빌더의 갤러리':
+        return (
+          <ImageGallery 
+            images={galleryImages}
+            members={members}
+            onCreate={handleCreateGalleryImage}
+            onDelete={handleDeleteGalleryImage}
+            isDarkMode={isDarkMode}
+          />
         );
       case '지식 공유': // This is a trick to find a good spot if needed, but I'll use the existing switch.
         return (

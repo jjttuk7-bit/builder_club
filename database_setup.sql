@@ -51,6 +51,15 @@ CREATE TABLE IF NOT EXISTS public.scratchpad_notes (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 7. 빌더의 갤러리 테이블 생성
+CREATE TABLE IF NOT EXISTS public.gallery_images (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    title TEXT NOT NULL,
+    image_url TEXT NOT NULL,
+    author_id TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- 기본 데이터 (필요 시)
 -- RLS (보안 정책) 해제하여 누구나 읽고 쓸 수 있게 설정 (팀 협업용)
 ALTER TABLE public.posts ENABLE ROW LEVEL SECURITY;
@@ -70,3 +79,6 @@ CREATE POLICY "Allow all to builder_memos" ON public.builder_memos FOR ALL USING
 
 ALTER TABLE public.scratchpad_notes ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow all to scratchpad_notes" ON public.scratchpad_notes FOR ALL USING (true) WITH CHECK (true);
+
+ALTER TABLE public.gallery_images ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all to gallery_images" ON public.gallery_images FOR ALL USING (true) WITH CHECK (true);
